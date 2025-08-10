@@ -7,8 +7,6 @@ local LocalPlayer = Players.LocalPlayer
 local speedHackOn = false
 local jumpHackOn = false
 local espOn = false
-local espJumpOn = false
-local espRunOn = false
 
 -- Valores normais
 local normalWalkSpeed = 16
@@ -18,8 +16,11 @@ local normalJumpPower = 50
 local hackWalkSpeed = 50
 local hackJumpPower = 100
 
-local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local hum = char:FindFirstChildOfClass("Humanoid") or char:WaitForChild("Humanoid")
+local function getCharAndHum(player)
+    local char = player.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    return char, hum
+end
 
 -- GUI
 local screenGui = Instance.new("ScreenGui")
@@ -28,7 +29,7 @@ screenGui.ResetOnSpawn = false
 screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame", screenGui)
-frame.Size = UDim2.new(0, 240, 0, 260)
+frame.Size = UDim2.new(0, 240, 0, 150)
 frame.Position = UDim2.new(0, 20, 0, 20)
 frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 frame.BorderSizePixel = 0
@@ -41,7 +42,7 @@ Instance.new("UIStroke", frame).Color = Color3.fromRGB(90, 90, 90)
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1, 0, 0, 30)
 title.BackgroundTransparency = 1
-title.Text = "🦟 bolsonarogay"
+title.Text = "🦟 MoskitoHub"
 title.TextColor3 = Color3.new(1, 1, 1)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 22
@@ -63,7 +64,7 @@ end)
 -- Função para criar botão com callback
 local function createToggleBtn(text, posY, callback)
     local btn = Instance.new("TextButton", frame)
-    btn.Size = UDim2.new(1, -20, 0, 40)
+    btn.Size = UDim2.new(1, -20, 0, 32)
     btn.Position = UDim2.new(0, 10, 0, posY)
     btn.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
     btn.TextColor3 = Color3.new(1, 1, 1)
@@ -80,165 +81,93 @@ local function createToggleBtn(text, posY, callback)
     return btn
 end
 
--- ESP: deixa o personagem local todo vermelho
-local function ApplyESPToChar(apply)
-    if char then
-        for _, part in pairs(char:GetChildren()) do
-            if part:IsA("BasePart") then
-                if apply then
-                    part.Color = Color3.new(1, 0, 0)
-                    part.Material = Enum.Material.Neon
-                else
-                    -- Restaurar cor padrão (ajuste conforme seu jogo se necessário)
-                    part.Color = part.Name == "Head" and Color3.new(1, 0.8, 0.6) or Color3.new(1, 1, 1)
-                    part.Material = Enum.Material.Plastic
+-- ESP: deixa todos personagens vermelhos
+local function ApplyESPToAllPlayers(apply)
+    for _, player in ipairs(Players:GetPlayers()) do
+        local char = player.Character
+        if char then
+            for _, part in pairs(char:GetChildren()) do
+                if part:IsA("BasePart") then
+                    if apply then
+                        part.Color = Color3.new(1, 0, 0)
+                        part.Material = Enum.Material.Neon
+                    else
+                        -- Restaurar cor padrão (ajuste conforme o jogo se necessário)
+                        part.Color = part.Name == "Head" and Color3.new(1, 0.8, 0.6) or Color3.new(1, 1, 1)
+                        part.Material = Enum.Material.Plastic
+                    end
                 end
             end
         end
     end
 end
 
--- Função para aplicar ESP Jump (pula automaticamente quando ativado)
-local espJumpConn = nil
-local function ESPJump(active)
-    if espJumpConn then espJumpConn:Disconnect() espJumpConn = nil end
-    if active then
-        espJumpConn = RunService.RenderStepped:Connect(function()
-            if hum and hum.Parent and hum:GetState() == Enum.HumanoidStateType.Freefall then
-                hum:ChangeState(Enum.HumanoidStateType.Jumping)
+-- Sempre reaplica ESP quando um player respawna
+local function setupCharacterAdded()
+    for _, player in ipairs(Players:GetPlayers()) do
+        player.CharacterAdded:Connect(function()
+            if espOn then
+                ApplyESPToAllPlayers(true)
             end
         end)
     end
 end
 
--- Função para aplicar ESP Run (corre automaticamente quando ativado)
-local espRunConn = nil
-local function ESPRun(active)
-    if espRunConn then espRunConn:Disconnect() espRunConn = nil end
-    if active then
-        espRunConn = RunService.RenderStepped:Connect(function()
-            if hum and hum.Parent then
-                hum.WalkSpeed = hackWalkSpeed
-            end
-        end)
-    else
-        if hum and hum.Parent then
-            hum.WalkSpeed = normalWalkSpeed
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function()
+        if espOn then
+            ApplyESPToAllPlayers(true)
         end
-    end
-end
+    end)
+end)
+setupCharacterAdded()
 
--- Função segura para aplicar valores
-local function applyCheats()
-    if hum and hum.Parent then
+-- Função para aplicar cheats locais
+local function applyLocalCheats()
+    local char, hum = getCharAndHum(LocalPlayer)
+    if hum then
         hum.WalkSpeed = speedHackOn and hackWalkSpeed or normalWalkSpeed
         hum.JumpPower = jumpHackOn and hackJumpPower or normalJumpPower
     end
 end
 
 -- Botões do painel
-local speedBtn = createToggleBtn("Ativar Speed Hack", 40, function(btn)
+local espBtn = createToggleBtn("Ativar ESP (todos vermelhos)", 40, function(btn)
+    espOn = not espOn
+    ApplyESPToAllPlayers(espOn)
+    btn.Text = espOn and "Desativar ESP (todos vermelhos)" or "Ativar ESP (todos vermelhos)"
+    btn.BackgroundColor3 = espOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70, 130, 180)
+end)
+
+local speedBtn = createToggleBtn("Ativar Speed Hack", 80, function(btn)
     speedHackOn = not speedHackOn
-    applyCheats()
+    applyLocalCheats()
     btn.Text = speedHackOn and "Desativar Speed Hack" or "Ativar Speed Hack"
     btn.BackgroundColor3 = speedHackOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70, 130, 180)
 end)
 
-local jumpBtn = createToggleBtn("Ativar Jump Hack", 90, function(btn)
+local jumpBtn = createToggleBtn("Ativar Jump Hack", 120, function(btn)
     jumpHackOn = not jumpHackOn
-    applyCheats()
+    applyLocalCheats()
     btn.Text = jumpHackOn and "Desativar Jump Hack" or "Ativar Jump Hack"
     btn.BackgroundColor3 = jumpHackOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70, 130, 180)
 end)
 
-local espBtn = createToggleBtn("Ativar ESP (vermelho)", 140, function(btn)
-    espOn = not espOn
-    ApplyESPToChar(espOn)
-    btn.Text = espOn and "Desativar ESP (vermelho)" or "Ativar ESP (vermelho)"
-    btn.BackgroundColor3 = espOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70, 130, 180)
-end)
-
-local espJumpBtn = createToggleBtn("Ativar ESP Pulo", 190, function(btn)
-    espJumpOn = not espJumpOn
-    ESPJump(espJumpOn)
-    btn.Text = espJumpOn and "Desativar ESP Pulo" or "Ativar ESP Pulo"
-    btn.BackgroundColor3 = espJumpOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70, 130, 180)
-end)
-
-local espRunBtn = createToggleBtn("Ativar ESP Correr", 235, function(btn)
-    espRunOn = not espRunOn
-    ESPRun(espRunOn)
-    btn.Text = espRunOn and "Desativar ESP Correr" or "Ativar ESP Correr"
-    btn.BackgroundColor3 = espRunOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70, 130, 180)
-end)
-
--- Bypass anti-cheat: metamétodo, Kick/Destroy, RemoteEvents e remover scripts
-local mt = getrawmetatable(game)
-local oldIndex = mt.__index
-local oldNewIndex = mt.__newindex
-setreadonly(mt, false)
-
-mt.__index = function(tbl, key)
-    if tbl == hum then
-        if key == "WalkSpeed" and speedHackOn then
-            return normalWalkSpeed
-        elseif key == "JumpPower" and jumpHackOn then
-            return normalJumpPower
-        end
-    end
-    if typeof(tbl) == "Instance" and tbl:IsA("Humanoid") then
-        if key == "WalkSpeed" then
-            return normalWalkSpeed
-        elseif key == "JumpPower" then
-            return normalJumpPower
-        elseif key == "Health" then
-            return 100
-        end
-    end
-    if tostring(key) == "DetectedCheat" then
-        return false
-    end
-    return oldIndex(tbl, key)
-end
-
-mt.__newindex = function(tbl, key, value)
-    if typeof(tbl) == "Instance" and tbl:IsA("Humanoid") then
-        if key == "WalkSpeed" or key == "JumpPower" or key == "Health" then
-            return -- ignora resets do servidor
-        end
-    end
-    return oldNewIndex(tbl, key, value)
-end
-setreadonly(mt, true)
-
--- Hook Kick e Destroy
-LocalPlayer.Kick = function() return end
-LocalPlayer.Destroy = function() return end
-
--- Remover scripts anti-cheat do personagem se existirem
-for _, v in pairs(char:GetChildren()) do
-    if v:IsA("Script") and v.Name:lower():find("cheat") then
-        v:Destroy()
-    end
-end
-
--- Interceptar RemoteEvents anti-cheat
-for _, v in pairs(game:GetDescendants()) do
-    if v:IsA("RemoteEvent") and v.Name:lower():find("cheat") then
-        v.OnClientEvent:Connect(function() end)
-    end
-end
-
--- Reaplicar cheats ao morrer
+-- Reaplicar cheats ao morrer localmente
 LocalPlayer.CharacterAdded:Connect(function(character)
-    char = character
-    hum = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid", 10)
-    applyCheats()
+    applyLocalCheats()
     if espOn then
-        ApplyESPToChar(true)
+        ApplyESPToAllPlayers(true)
     end
-    ESPJump(espJumpOn)
-    ESPRun(espRunOn)
 end)
 
-applyCheats()
+-- Reaplicar ESP se outros players respawnarem
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function()
+        if espOn then
+            ApplyESPToAllPlayers(true)
+        end
+    end)
+end)
+
+applyLocalCheats()

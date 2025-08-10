@@ -8,6 +8,9 @@ local hum = char:WaitForChild("Humanoid")
 -- Estados dos cheats
 local speedHackOn = false
 local jumpHackOn = false
+local espOn = false
+local espJumpOn = false
+local espRunOn = false
 
 -- Valores normais
 local normalWalkSpeed = 16
@@ -23,7 +26,7 @@ screenGui.Name = "MoskitoHub"
 screenGui.ResetOnSpawn = false
 
 local frame = Instance.new("Frame", screenGui)
-frame.Size = UDim2.new(0, 240, 0, 220)
+frame.Size = UDim2.new(0, 240, 0, 260)
 frame.Position = UDim2.new(0, 20, 0, 20)
 frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 frame.BorderSizePixel = 0
@@ -75,38 +78,91 @@ local function createToggleBtn(text, posY, callback)
     return btn
 end
 
--- ESP
-function CreateESP(player)
-    if player.Character and player.Character:FindFirstChild("Head") and not player.Character:FindFirstChild("MoskitoESP") then
-        local billboard = Instance.new("BillboardGui")
-        billboard.Name = "MoskitoESP"
-        billboard.Adornee = player.Character.Head
-        billboard.Parent = player.Character
-        billboard.Size = UDim2.new(0, 100, 0, 40)
-        billboard.AlwaysOnTop = true
-
-        local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(1, 0, 1, 0)
-        label.BackgroundTransparency = 1
-        label.Text = player.Name
-        label.TextColor3 = Color3.new(1, 0, 0)
-        label.TextStrokeTransparency = 0.5
-        label.Font = Enum.Font.GothamBold
-        label.TextSize = 16
-        label.Parent = billboard
+-- ESP: deixa o personagem local todo vermelho
+local function ApplyESPToChar(apply)
+    if char then
+        for _, part in pairs(char:GetChildren()) do
+            if part:IsA("BasePart") then
+                if apply then
+                    part.Color = Color3.new(1, 0, 0)
+                    part.Material = Enum.Material.Neon
+                else
+                    part.Color = part.Name == "Head" and Color3.new(1, 0.8, 0.6) or Color3.new(1, 1, 1)
+                    part.Material = Enum.Material.Plastic
+                end
+            end
+        end
     end
 end
 
-for _, player in pairs(Players:GetPlayers()) do
-    if player ~= LocalPlayer then
-        CreateESP(player)
+-- Função para aplicar ESP Jump (pula automaticamente quando ativado)
+local function ESPJump(active)
+    if active then
+        RunService.RenderStepped:Connect(function()
+            if espJumpOn and hum and hum.Parent and hum:GetState() == Enum.HumanoidStateType.Freefall then
+                hum:ChangeState(Enum.HumanoidStateType.Jumping)
+            end
+        end)
     end
 end
 
-Players.PlayerAdded:Connect(function(player)
-    player.CharacterAdded:Connect(function()
-        CreateESP(player)
-    end)
+-- Função para aplicar ESP Run (corre automaticamente quando ativado)
+local function ESPRun(active)
+    if active then
+        RunService.RenderStepped:Connect(function()
+            if espRunOn and hum and hum.Parent then
+                hum.WalkSpeed = hackWalkSpeed
+            end
+        end)
+    else
+        if hum and hum.Parent then
+            hum.WalkSpeed = normalWalkSpeed
+        end
+    end
+end
+
+-- Função segura para aplicar valores
+local function applyCheats()
+    if hum and hum.Parent then
+        hum.WalkSpeed = speedHackOn and hackWalkSpeed or normalWalkSpeed
+        hum.JumpPower = jumpHackOn and hackJumpPower or normalJumpPower
+    end
+end
+
+-- Botões do painel
+local speedBtn = createToggleBtn("Ativar Speed Hack", 40, function(btn)
+    speedHackOn = not speedHackOn
+    applyCheats()
+    btn.Text = speedHackOn and "Desativar Speed Hack" or "Ativar Speed Hack"
+    btn.BackgroundColor3 = speedHackOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70, 130, 180)
+end)
+
+local jumpBtn = createToggleBtn("Ativar Jump Hack", 90, function(btn)
+    jumpHackOn = not jumpHackOn
+    applyCheats()
+    btn.Text = jumpHackOn and "Desativar Jump Hack" or "Ativar Jump Hack"
+    btn.BackgroundColor3 = jumpHackOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70, 130, 180)
+end)
+
+local espBtn = createToggleBtn("Ativar ESP (vermelho)", 140, function(btn)
+    espOn = not espOn
+    ApplyESPToChar(espOn)
+    btn.Text = espOn and "Desativar ESP (vermelho)" or "Ativar ESP (vermelho)"
+    btn.BackgroundColor3 = espOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70, 130, 180)
+end)
+
+local espJumpBtn = createToggleBtn("Ativar ESP Pulo", 190, function(btn)
+    espJumpOn = not espJumpOn
+    ESPJump(espJumpOn)
+    btn.Text = espJumpOn and "Desativar ESP Pulo" or "Ativar ESP Pulo"
+    btn.BackgroundColor3 = espJumpOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70, 130, 180)
+end)
+
+local espRunBtn = createToggleBtn("Ativar ESP Correr", 235, function(btn)
+    espRunOn = not espRunOn
+    ESPRun(espRunOn)
+    btn.Text = espRunOn and "Desativar ESP Correr" or "Ativar ESP Correr"
+    btn.BackgroundColor3 = espRunOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70, 130, 180)
 end)
 
 -- Bypass anti-cheat: metamétodo, Kick/Destroy, RemoteEvents e remover scripts
@@ -166,56 +222,15 @@ for _, v in pairs(game:GetDescendants()) do
     end
 end
 
--- Função segura para aplicar valores
-local function applyCheats()
-    if hum and hum.Parent then
-        hum.WalkSpeed = speedHackOn and hackWalkSpeed or normalWalkSpeed
-        hum.JumpPower = jumpHackOn and hackJumpPower or normalJumpPower
-    end
-end
-
--- Botões do painel
-local speedBtn = createToggleBtn("Ativar Speed Hack", 40, function(btn)
-    speedHackOn = not speedHackOn
-    applyCheats()
-    btn.Text = speedHackOn and "Desativar Speed Hack" or "Ativar Speed Hack"
-    btn.BackgroundColor3 = speedHackOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70, 130, 180)
-end)
-
-local jumpBtn = createToggleBtn("Ativar Jump Hack", 90, function(btn)
-    jumpHackOn = not jumpHackOn
-    applyCheats()
-    btn.Text = jumpHackOn and "Desativar Jump Hack" or "Ativar Jump Hack"
-    btn.BackgroundColor3 = jumpHackOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70, 130, 180)
-end)
-
-local espBtn = createToggleBtn("Ativar ESP", 140, function(btn)
-    local espActive = btn.Text == "Ativar ESP"
-    if espActive then
-        for _, player in pairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer then
-                CreateESP(player)
-            end
-        end
-        btn.Text = "Desativar ESP"
-        btn.BackgroundColor3 = Color3.fromRGB(0, 180, 90)
-    else
-        for _, player in pairs(Players:GetPlayers()) do
-            if player.Character and player.Character:FindFirstChild("MoskitoESP") then
-                player.Character.MoskitoESP:Destroy()
-            end
-        end
-        btn.Text = "Ativar ESP"
-        btn.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
-    end
-end)
-
 -- Reaplicar cheats ao morrer
 LocalPlayer.CharacterAdded:Connect(function(character)
     char = character
     hum = character:WaitForChild("Humanoid", 10)
     if hum then
         applyCheats()
+        if espOn then
+            ApplyESPToChar(true)
+        end
     end
 end)
 
@@ -223,6 +238,7 @@ RunService.RenderStepped:Connect(function()
     if hum and hum.Parent then
         if speedHackOn then hum.WalkSpeed = hackWalkSpeed end
         if jumpHackOn then hum.JumpPower = hackJumpPower end
+        if espRunOn then hum.WalkSpeed = hackWalkSpeed end
     end
 end)
 

@@ -1,4 +1,6 @@
 local player = game.Players.LocalPlayer
+local RunService = game:GetService("RunService")
+
 local gui = Instance.new("ScreenGui")
 gui.Name = "moskitaohub"
 gui.Parent = player:WaitForChild("PlayerGui")
@@ -23,18 +25,25 @@ local puloNormal = humanoid.JumpPower
 local velocidadeBoost = 60
 local puloBoost = 100
 
-local function toggleBoost()
+local function aplicarBoost()
+    if not humanoid then return end
     if boostAtivo then
-        humanoid.WalkSpeed = velocidadeNormal
-        humanoid.JumpPower = puloNormal
-        boostAtivo = false
-        button.Text = "Boost OFF"
+        if humanoid.WalkSpeed ~= velocidadeBoost or humanoid.JumpPower ~= puloBoost then
+            humanoid.WalkSpeed = velocidadeBoost
+            humanoid.JumpPower = puloBoost
+        end
     else
-        humanoid.WalkSpeed = velocidadeBoost
-        humanoid.JumpPower = puloBoost
-        boostAtivo = true
-        button.Text = "Boost ON"
+        if humanoid.WalkSpeed ~= velocidadeNormal or humanoid.JumpPower ~= puloNormal then
+            humanoid.WalkSpeed = velocidadeNormal
+            humanoid.JumpPower = puloNormal
+        end
     end
+end
+
+local function toggleBoost()
+    boostAtivo = not boostAtivo
+    button.Text = boostAtivo and "Boost ON" or "Boost OFF"
+    aplicarBoost()
 end
 
 button.MouseButton1Click:Connect(toggleBoost)
@@ -42,8 +51,22 @@ button.MouseButton1Click:Connect(toggleBoost)
 player.CharacterAdded:Connect(function(char)
     character = char
     humanoid = character:WaitForChild("Humanoid")
-    humanoid.WalkSpeed = velocidadeNormal
-    humanoid.JumpPower = puloNormal
+
+    velocidadeNormal = humanoid.WalkSpeed
+    puloNormal = humanoid.JumpPower
+
     boostAtivo = false
     button.Text = "Boost OFF"
+
+    -- Espera e reaplica boost para evitar resets iniciais
+    task.wait(0.5)
+    if boostAtivo then
+        aplicarBoost()
+    end
+end)
+
+RunService.Heartbeat:Connect(function()
+    if humanoid and humanoid.Parent then
+        aplicarBoost()
+    end
 end)

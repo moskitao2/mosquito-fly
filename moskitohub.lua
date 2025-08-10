@@ -1,74 +1,62 @@
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 local char = player.Character or player.CharacterAdded:Wait()
 local hum = char:WaitForChild("Humanoid")
 
--- Cheats state
+-- Estados dos cheats
 local speedHackOn = false
 local jumpHackOn = false
 
--- Normal values
+-- Valores normais
 local normalWalkSpeed = 16
 local normalJumpPower = 50
 
--- Hack values
+-- Valores de hack
 local hackWalkSpeed = 50
 local hackJumpPower = 100
 
--- GUI setup
-local screenGui = Instance.new("ScreenGui")
+-- GUI
+local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 screenGui.Name = "MoskitoHub"
-screenGui.Parent = player:WaitForChild("PlayerGui")
 screenGui.ResetOnSpawn = false
 
-local frame = Instance.new("Frame")
+local frame = Instance.new("Frame", screenGui)
 frame.Size = UDim2.new(0, 240, 0, 180)
 frame.Position = UDim2.new(0, 20, 0, 20)
 frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 frame.BorderSizePixel = 0
-frame.Parent = screenGui
 frame.Active = true
 frame.Draggable = true
 
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 6)
-corner.Parent = frame
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 6)
+Instance.new("UIStroke", frame).Color = Color3.fromRGB(90, 90, 90)
 
-local stroke = Instance.new("UIStroke")
-stroke.Color = Color3.fromRGB(90, 90, 90)
-stroke.Thickness = 1.5
-stroke.Transparency = 0.3
-stroke.Parent = frame
-
-local title = Instance.new("TextLabel")
+local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1, 0, 0, 30)
 title.BackgroundTransparency = 1
 title.Text = "🦟 Moskito Hub"
-title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextColor3 = Color3.new(1, 1, 1)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 22
-title.Parent = frame
 
-local closeBtn = Instance.new("TextButton")
+local closeBtn = Instance.new("TextButton", frame)
 closeBtn.Size = UDim2.new(0, 25, 0, 25)
 closeBtn.Position = UDim2.new(1, -30, 0, 2)
 closeBtn.BackgroundColor3 = Color3.fromRGB(170, 0, 0)
 closeBtn.Text = "X"
-closeBtn.TextColor3 = Color3.new(1,1,1)
+closeBtn.TextColor3 = Color3.new(1, 1, 1)
 closeBtn.Font = Enum.Font.GothamBold
 closeBtn.TextSize = 16
-closeBtn.Parent = frame
-
-local btnCorner = Instance.new("UICorner", closeBtn)
-btnCorner.CornerRadius = UDim.new(0, 5)
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 5)
 
 closeBtn.MouseButton1Click:Connect(function()
     screenGui:Destroy()
 end)
 
--- Toggle button creator
+-- Criar botão com callback
 local function createToggleBtn(text, posY, callback)
-    local btn = Instance.new("TextButton")
+    local btn = Instance.new("TextButton", frame)
     btn.Size = UDim2.new(1, -20, 0, 40)
     btn.Position = UDim2.new(0, 10, 0, posY)
     btn.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
@@ -77,10 +65,7 @@ local function createToggleBtn(text, posY, callback)
     btn.TextSize = 18
     btn.Text = text
     btn.AutoButtonColor = true
-    btn.Parent = frame
-
-    local uicorner = Instance.new("UICorner", btn)
-    uicorner.CornerRadius = UDim.new(0, 6)
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
 
     btn.MouseButton1Click:Connect(function()
         callback(btn)
@@ -89,7 +74,7 @@ local function createToggleBtn(text, posY, callback)
     return btn
 end
 
--- Bypass anti-cheat (metatable hook)
+-- Proteção anti-cheat básica
 local mt = getrawmetatable(game)
 local oldIndex = mt.__index
 setreadonly(mt, false)
@@ -107,33 +92,45 @@ end
 
 setreadonly(mt, true)
 
--- Apply hack values
+-- Função segura para aplicar valores
 local function applyCheats()
-    hum.WalkSpeed = speedHackOn and hackWalkSpeed or normalWalkSpeed
-    hum.JumpPower = jumpHackOn and hackJumpPower or normalJumpPower
+    if hum and hum.Parent then
+        hum.WalkSpeed = speedHackOn and hackWalkSpeed or normalWalkSpeed
+        hum.JumpPower = jumpHackOn and hackJumpPower or normalJumpPower
+    end
 end
 
--- Toggle buttons
+-- Botões
 local speedBtn = createToggleBtn("Ativar Speed Hack", 40, function(btn)
     speedHackOn = not speedHackOn
     applyCheats()
     btn.Text = speedHackOn and "Desativar Speed Hack" or "Ativar Speed Hack"
-    btn.BackgroundColor3 = speedHackOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70,130,180)
+    btn.BackgroundColor3 = speedHackOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70, 130, 180)
 end)
 
 local jumpBtn = createToggleBtn("Ativar Jump Hack", 90, function(btn)
     jumpHackOn = not jumpHackOn
     applyCheats()
     btn.Text = jumpHackOn and "Desativar Jump Hack" or "Ativar Jump Hack"
-    btn.BackgroundColor3 = jumpHackOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70,130,180)
+    btn.BackgroundColor3 = jumpHackOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70, 130, 180)
 end)
 
--- Reapply cheats on respawn
+-- Reaplicar ao morrer
 player.CharacterAdded:Connect(function(character)
     char = character
-    hum = char:WaitForChild("Humanoid")
-    applyCheats()
+    hum = character:WaitForChild("Humanoid", 10)
+    if hum then
+        applyCheats()
+    end
 end)
 
--- Apply on first load
+-- Reaplicar a cada frame (resistente ao servidor resetar)
+RunService.RenderStepped:Connect(function()
+    if hum and hum.Parent then
+        if speedHackOn then hum.WalkSpeed = hackWalkSpeed end
+        if jumpHackOn then hum.JumpPower = hackJumpPower end
+    end
+end)
+
+-- Aplicar no load
 applyCheats()

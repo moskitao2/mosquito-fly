@@ -1,7 +1,8 @@
+-- Serviços
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local player = Players.LocalPlayer
-local char = player.Character or player.CharacterAdded:Wait()
+local LocalPlayer = Players.LocalPlayer
+local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local hum = char:WaitForChild("Humanoid")
 
 -- Estados dos cheats
@@ -17,12 +18,12 @@ local hackWalkSpeed = 50
 local hackJumpPower = 100
 
 -- GUI
-local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+local screenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
 screenGui.Name = "MoskitoHub"
 screenGui.ResetOnSpawn = false
 
 local frame = Instance.new("Frame", screenGui)
-frame.Size = UDim2.new(0, 240, 0, 180)
+frame.Size = UDim2.new(0, 240, 0, 220)
 frame.Position = UDim2.new(0, 20, 0, 20)
 frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 frame.BorderSizePixel = 0
@@ -54,7 +55,7 @@ closeBtn.MouseButton1Click:Connect(function()
     screenGui:Destroy()
 end)
 
--- Criar botão com callback
+-- Função para criar botão com callback
 local function createToggleBtn(text, posY, callback)
     local btn = Instance.new("TextButton", frame)
     btn.Size = UDim2.new(1, -20, 0, 40)
@@ -74,7 +75,41 @@ local function createToggleBtn(text, posY, callback)
     return btn
 end
 
--- Proteção anti-cheat básica
+-- ESP
+function CreateESP(player)
+    if player.Character and player.Character:FindFirstChild("Head") and not player.Character:FindFirstChild("MoskitoESP") then
+        local billboard = Instance.new("BillboardGui")
+        billboard.Name = "MoskitoESP"
+        billboard.Adornee = player.Character.Head
+        billboard.Parent = player.Character
+        billboard.Size = UDim2.new(0, 100, 0, 40)
+        billboard.AlwaysOnTop = true
+
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(1, 0, 1, 0)
+        label.BackgroundTransparency = 1
+        label.Text = player.Name
+        label.TextColor3 = Color3.new(1, 0, 0)
+        label.TextStrokeTransparency = 0.5
+        label.Font = Enum.Font.GothamBold
+        label.TextSize = 16
+        label.Parent = billboard
+    end
+end
+
+for _, player in pairs(Players:GetPlayers()) do
+    if player ~= LocalPlayer then
+        CreateESP(player)
+    end
+end
+
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function()
+        CreateESP(player)
+    end)
+end)
+
+-- Bypass básico de anti-cheat
 local mt = getrawmetatable(game)
 local oldIndex = mt.__index
 setreadonly(mt, false)
@@ -86,6 +121,9 @@ mt.__index = function(tbl, key)
         elseif key == "JumpPower" and jumpHackOn then
             return normalJumpPower
         end
+    end
+    if tostring(key) == "DetectedCheat" then
+        return false -- ignora detecção de cheat
     end
     return oldIndex(tbl, key)
 end
@@ -100,7 +138,7 @@ local function applyCheats()
     end
 end
 
--- Botões
+-- Botões do painel
 local speedBtn = createToggleBtn("Ativar Speed Hack", 40, function(btn)
     speedHackOn = not speedHackOn
     applyCheats()
@@ -115,8 +153,30 @@ local jumpBtn = createToggleBtn("Ativar Jump Hack", 90, function(btn)
     btn.BackgroundColor3 = jumpHackOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70, 130, 180)
 end)
 
--- Reaplicar ao morrer
-player.CharacterAdded:Connect(function(character)
+-- Botão ESP
+local espBtn = createToggleBtn("Ativar ESP", 140, function(btn)
+    local espActive = btn.Text == "Ativar ESP"
+    if espActive then
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                CreateESP(player)
+            end
+        end
+        btn.Text = "Desativar ESP"
+        btn.BackgroundColor3 = Color3.fromRGB(0, 180, 90)
+    else
+        for _, player in pairs(Players:GetPlayers()) do
+            if player.Character and player.Character:FindFirstChild("MoskitoESP") then
+                player.Character.MoskitoESP:Destroy()
+            end
+        end
+        btn.Text = "Ativar ESP"
+        btn.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
+    end
+end)
+
+-- Reaplicar cheats ao morrer
+LocalPlayer.CharacterAdded:Connect(function(character)
     char = character
     hum = character:WaitForChild("Humanoid", 10)
     if hum then
@@ -134,4 +194,3 @@ end)
 
 -- Aplicar no load
 applyCheats()
-

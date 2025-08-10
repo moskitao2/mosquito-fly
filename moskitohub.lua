@@ -103,7 +103,7 @@ local function createToggleBtn(text, posY, callback)
     return btn
 end
 
--- ESP seguro
+-- ESP
 local function clearESP(char)
     if not char then return end
     for _, part in ipairs(char:GetDescendants()) do
@@ -148,13 +148,25 @@ local function updateESPForAll()
     end
 end
 
--- Bypass velocidade e pulo (tipo tsuo)
+-- Atualizações constantes
 RunService.Stepped:Connect(function()
     local char, hum = getCharAndHum(LocalPlayer)
     if hum then
         if speedHackOn then hum.WalkSpeed = hackWalkSpeed end
         if jumpHackOn then hum.JumpPower = hackJumpPower end
     end
+end)
+
+RunService.RenderStepped:Connect(function()
+    updateESPForAll()
+end)
+
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function(char)
+        if espOn then
+            addESPToChar(char)
+        end
+    end)
 end)
 
 -- Botões
@@ -179,22 +191,10 @@ local jumpBtn = createToggleBtn("Ativar Jump Hack", 150, function(btn)
     jumpBtn._on = jumpHackOn
 end)
 
--- Atualização constante com bypass
-RunService.RenderStepped:Connect(function()
-    updateESPForAll()
-end)
+-- 🛡️ Proteção __newindex (Delta compatível)
+if not _G.MoskitoHubNewIndexHooked then
+    _G.MoskitoHubNewIndexHooked = true
 
-Players.PlayerAdded:Connect(function(player)
-    player.CharacterAdded:Connect(function(char)
-        if espOn then
-            addESPToChar(char)
-        end
-    end)
-end)
-
--- 🛡️ Proteção total contra reset de atributos do Humanoid
-
-local function applyHumanoidProtection(hum)
     local mt = getrawmetatable(game)
     setreadonly(mt, false)
 
@@ -202,22 +202,18 @@ local function applyHumanoidProtection(hum)
 
     mt.__newindex = newcclosure(function(tbl, key, val)
         if typeof(tbl) == "Instance" and tbl:IsA("Humanoid") then
-            -- Proteção WalkSpeed
             if key == "WalkSpeed" and speedHackOn and val ~= hackWalkSpeed then
-                warn("[MoskitoHub] ⚠️ Bloqueado tentativa de alterar WalkSpeed para:", val)
+                warn("[MoskitoHub] ⚠️ Bloqueado alteração de WalkSpeed:", val)
                 return
             end
-            -- Proteção JumpPower
             if key == "JumpPower" and jumpHackOn and val ~= hackJumpPower then
-                warn("[MoskitoHub] ⚠️ Bloqueado tentativa de alterar JumpPower para:", val)
+                warn("[MoskitoHub] ⚠️ Bloqueado alteração de JumpPower:", val)
                 return
             end
-            -- Proteção JumpHeight (alguns jogos usam isso)
             if key == "JumpHeight" and jumpHackOn then
-                warn("[MoskitoHub] ⚠️ Bloqueado tentativa de alterar JumpHeight para:", val)
+                warn("[MoskitoHub] ⚠️ Bloqueado alteração de JumpHeight:", val)
                 return
             end
-            -- Proteção para não desativar uso do JumpPower
             if key == "UseJumpPower" and jumpHackOn and val == false then
                 warn("[MoskitoHub] ⚠️ Tentaram desativar UseJumpPower")
                 return
@@ -225,26 +221,11 @@ local function applyHumanoidProtection(hum)
         end
         return oldNewIndex(tbl, key, val)
     end)
+
+    setreadonly(mt, true)
 end
 
--- Aplica proteção assim que possível
-local function setupHumanoidProtection()
-    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    local hum = char:WaitForChild("Humanoid")
-    task.wait(1)
-    applyHumanoidProtection(hum)
-end
-
-setupHumanoidProtection()
-
--- Reaplica ao morrer/renascer
-LocalPlayer.CharacterAdded:Connect(function(char)
-    char:WaitForChild("Humanoid")
-    task.wait(1.5)
-    applyHumanoidProtection(char:FindFirstChild("Humanoid"))
-end)
-
--- 🛡️ Proteção Anti-Kick / Anti-AntiCheat / Hook __namecall
+-- 🛡️ Hook __namecall (anti-kick / anti-anticheat)
 if not _G.MoskitoHubHooked then
     _G.MoskitoHubHooked = true
 
@@ -253,25 +234,21 @@ if not _G.MoskitoHubHooked then
         local method = getnamecallmethod()
         local args = {...}
 
-        -- Bloqueia :Kick() no LocalPlayer
         if method == "Kick" and self == LocalPlayer then
             warn("[MoskitoHub] ⚠️ Kick bloqueado.")
             return nil
         end
 
-        -- Bloqueia :Destroy() no jogador
         if method == "Destroy" and self == LocalPlayer then
             warn("[MoskitoHub] ⚠️ Destroy bloqueado.")
             return nil
         end
 
-        -- Bloqueia :BreakJoints() no personagem
         if method == "BreakJoints" and self == LocalPlayer.Character then
             warn("[MoskitoHub] ⚠️ BreakJoints bloqueado.")
             return nil
         end
 
-        -- Bloqueia remotes suspeitos (anticheat etc)
         if (self:IsA("RemoteEvent") or self:IsA("RemoteFunction")) and method:lower():find("server") then
             local name = self.Name:lower()
             if name:find("anticheat") or name:find("report") or name:find("ban") then

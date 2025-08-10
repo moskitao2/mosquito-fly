@@ -109,9 +109,10 @@ Players.PlayerAdded:Connect(function(player)
     end)
 end)
 
--- Bypass básico de anti-cheat
+-- Bypass anti-cheat: metamétodo, Kick/Destroy, RemoteEvents e remover scripts
 local mt = getrawmetatable(game)
 local oldIndex = mt.__index
+local oldNewIndex = mt.__newindex
 setreadonly(mt, false)
 
 mt.__index = function(tbl, key)
@@ -122,13 +123,48 @@ mt.__index = function(tbl, key)
             return normalJumpPower
         end
     end
+    if typeof(tbl) == "Instance" and tbl:IsA("Humanoid") then
+        if key == "WalkSpeed" then
+            return normalWalkSpeed
+        elseif key == "JumpPower" then
+            return normalJumpPower
+        elseif key == "Health" then
+            return 100
+        end
+    end
     if tostring(key) == "DetectedCheat" then
-        return false -- ignora detecção de cheat
+        return false
     end
     return oldIndex(tbl, key)
 end
 
+mt.__newindex = function(tbl, key, value)
+    if typeof(tbl) == "Instance" and tbl:IsA("Humanoid") then
+        if key == "WalkSpeed" or key == "JumpPower" or key == "Health" then
+            return -- ignora resets do servidor
+        end
+    end
+    return oldNewIndex(tbl, key, value)
+end
 setreadonly(mt, true)
+
+-- Hook Kick e Destroy
+LocalPlayer.Kick = function() return end
+LocalPlayer.Destroy = function() return end
+
+-- Remover scripts anti-cheat do personagem se existirem
+for _, v in pairs(char:GetChildren()) do
+    if v:IsA("Script") and v.Name:lower():find("cheat") then
+        v:Destroy()
+    end
+end
+
+-- Interceptar RemoteEvents anti-cheat
+for _, v in pairs(game:GetDescendants()) do
+    if v:IsA("RemoteEvent") and v.Name:lower():find("cheat") then
+        v.OnClientEvent:Connect(function() end)
+    end
+end
 
 -- Função segura para aplicar valores
 local function applyCheats()
@@ -153,7 +189,6 @@ local jumpBtn = createToggleBtn("Ativar Jump Hack", 90, function(btn)
     btn.BackgroundColor3 = jumpHackOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70, 130, 180)
 end)
 
--- Botão ESP
 local espBtn = createToggleBtn("Ativar ESP", 140, function(btn)
     local espActive = btn.Text == "Ativar ESP"
     if espActive then
@@ -184,7 +219,6 @@ LocalPlayer.CharacterAdded:Connect(function(character)
     end
 end)
 
--- Reaplicar a cada frame (resistente ao servidor resetar)
 RunService.RenderStepped:Connect(function()
     if hum and hum.Parent then
         if speedHackOn then hum.WalkSpeed = hackWalkSpeed end
@@ -192,5 +226,4 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Aplicar no load
 applyCheats()

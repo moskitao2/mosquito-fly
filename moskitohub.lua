@@ -1,43 +1,49 @@
--- Moskitao Boost (Delta Executor)
-local plr = game:GetService("Players").LocalPlayer
-local UIS = game:GetService("UserInputService")
-local jumpBoost = true
-local sprintSpeed = 60
-local normalSpeed = 16
-local jumpPowerHigh = 100
-local jumpPowerNormal = 50
-local boostEnabled = false
+local player = game.Players.LocalPlayer
+local gui = Instance.new("ScreenGui")
+gui.Name = "moskitaohub"
+gui.Parent = player:WaitForChild("PlayerGui")
 
-local function enableBoost()
-    local char = plr.Character or plr.CharacterAdded:Wait()
-    local hum = char:WaitForChild("Humanoid")
-    hum.WalkSpeed = sprintSpeed
-    if jumpBoost then hum.JumpPower = jumpPowerHigh end
-    print("Boost Ativado")
-end
+local button = Instance.new("TextButton")
+button.Size = UDim2.new(0, 150, 0, 50)
+button.Position = UDim2.new(0, 20, 0, 20)
+button.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+button.TextColor3 = Color3.new(1, 1, 1)
+button.Font = Enum.Font.SourceSansBold
+button.TextSize = 24
+button.Text = "Boost OFF"
+button.Parent = gui
 
-local function disableBoost()
-    local char = plr.Character or plr.CharacterAdded:Wait()
-    local hum = char:WaitForChild("Humanoid")
-    hum.WalkSpeed = normalSpeed
-    hum.JumpPower = jumpPowerNormal
-    print("Boost Desativado")
-end
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
 
-UIS.InputBegan:Connect(function(input, gp)
-    if gp then return end
-    if input.KeyCode == Enum.KeyCode.G then
-        boostEnabled = not boostEnabled
-        if boostEnabled then
-            enableBoost()
-        else
-            disableBoost()
-        end
+local boostAtivo = false
+local velocidadeNormal = humanoid.WalkSpeed
+local puloNormal = humanoid.JumpPower
+
+local velocidadeBoost = 60
+local puloBoost = 100
+
+local function toggleBoost()
+    if boostAtivo then
+        humanoid.WalkSpeed = velocidadeNormal
+        humanoid.JumpPower = puloNormal
+        boostAtivo = false
+        button.Text = "Boost OFF"
+    else
+        humanoid.WalkSpeed = velocidadeBoost
+        humanoid.JumpPower = puloBoost
+        boostAtivo = true
+        button.Text = "Boost ON"
     end
-end)
+end
 
-plr.CharacterAdded:Connect(function(char)
-    boostEnabled = false
-    char:WaitForChild("Humanoid")
-    disableBoost()
+button.MouseButton1Click:Connect(toggleBoost)
+
+player.CharacterAdded:Connect(function(char)
+    character = char
+    humanoid = character:WaitForChild("Humanoid")
+    humanoid.WalkSpeed = velocidadeNormal
+    humanoid.JumpPower = puloNormal
+    boostAtivo = false
+    button.Text = "Boost OFF"
 end)

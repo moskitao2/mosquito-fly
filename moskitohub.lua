@@ -191,3 +191,92 @@ Players.PlayerAdded:Connect(function(player)
         end
     end)
 end)
+
+-- 🛡️ Proteção total contra reset de atributos do Humanoid
+
+local function applyHumanoidProtection(hum)
+    local mt = getrawmetatable(game)
+    setreadonly(mt, false)
+
+    local oldNewIndex = mt.__newindex
+
+    mt.__newindex = newcclosure(function(tbl, key, val)
+        if typeof(tbl) == "Instance" and tbl:IsA("Humanoid") then
+            -- Proteção WalkSpeed
+            if key == "WalkSpeed" and speedHackOn and val ~= hackWalkSpeed then
+                warn("[MoskitoHub] ⚠️ Bloqueado tentativa de alterar WalkSpeed para:", val)
+                return
+            end
+            -- Proteção JumpPower
+            if key == "JumpPower" and jumpHackOn and val ~= hackJumpPower then
+                warn("[MoskitoHub] ⚠️ Bloqueado tentativa de alterar JumpPower para:", val)
+                return
+            end
+            -- Proteção JumpHeight (alguns jogos usam isso)
+            if key == "JumpHeight" and jumpHackOn then
+                warn("[MoskitoHub] ⚠️ Bloqueado tentativa de alterar JumpHeight para:", val)
+                return
+            end
+            -- Proteção para não desativar uso do JumpPower
+            if key == "UseJumpPower" and jumpHackOn and val == false then
+                warn("[MoskitoHub] ⚠️ Tentaram desativar UseJumpPower")
+                return
+            end
+        end
+        return oldNewIndex(tbl, key, val)
+    end)
+end
+
+-- Aplica proteção assim que possível
+local function setupHumanoidProtection()
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local hum = char:WaitForChild("Humanoid")
+    task.wait(1)
+    applyHumanoidProtection(hum)
+end
+
+setupHumanoidProtection()
+
+-- Reaplica ao morrer/renascer
+LocalPlayer.CharacterAdded:Connect(function(char)
+    char:WaitForChild("Humanoid")
+    task.wait(1.5)
+    applyHumanoidProtection(char:FindFirstChild("Humanoid"))
+end)
+
+-- 🛡️ Proteção Anti-Kick / Anti-AntiCheat / Hook __namecall
+local oldNamecall
+oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+    local method = getnamecallmethod()
+    local args = {...}
+
+    -- Bloqueia :Kick() no LocalPlayer
+    if method == "Kick" and self == LocalPlayer then
+        warn("[MoskitoHub] ⚠️ Kick bloqueado.")
+        return nil
+    end
+
+    -- Bloqueia :Destroy() no jogador
+    if method == "Destroy" and self == LocalPlayer then
+        warn("[MoskitoHub] ⚠️ Destroy bloqueado.")
+        return nil
+    end
+
+    -- Bloqueia :BreakJoints() no personagem
+    if method == "BreakJoints" and self == LocalPlayer.Character then
+        warn("[MoskitoHub] ⚠️ BreakJoints bloqueado.")
+        return nil
+    end
+
+    -- Bloqueia remotes suspeitos (anticheat etc)
+    if (self:IsA("RemoteEvent") or self:IsA("RemoteFunction")) and method:lower():find("server") then
+        local name = self.Name:lower()
+        if name:find("anticheat") or name:find("report") or name:find("ban") then
+            warn("[MoskitoHub] ⚠️ Remote suspeito bloqueado:", self.Name)
+            return nil
+        end
+    end
+
+    return oldNamecall(self, ...)
+end))
+

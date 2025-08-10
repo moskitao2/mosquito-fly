@@ -1,8 +1,10 @@
 local player = game.Players.LocalPlayer
 local RunService = game:GetService("RunService")
 
+-- Criar GUI
 local gui = Instance.new("ScreenGui")
 gui.Name = "moskitaohub"
+gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local button = Instance.new("TextButton")
@@ -15,58 +17,31 @@ button.TextSize = 24
 button.Text = "Boost OFF"
 button.Parent = gui
 
+-- Inicialização
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 
 local boostAtivo = false
 local velocidadeNormal = humanoid.WalkSpeed
-local puloNormal = humanoid.JumpPower
-
+local puloNormal = humanoid.JumpHeight -- novo
 local velocidadeBoost = 60
-local puloBoost = 100
+local puloBoost = 25 -- JumpHeight boost
 
-local function aplicarBoost()
-    if not humanoid then return end
-    if boostAtivo then
-        if humanoid.WalkSpeed ~= velocidadeBoost or humanoid.JumpPower ~= puloBoost then
-            humanoid.WalkSpeed = velocidadeBoost
-            humanoid.JumpPower = puloBoost
-        end
-    else
-        if humanoid.WalkSpeed ~= velocidadeNormal or humanoid.JumpPower ~= puloNormal then
-            humanoid.WalkSpeed = velocidadeNormal
-            humanoid.JumpPower = puloNormal
-        end
-    end
-end
-
-local function toggleBoost()
-    boostAtivo = not boostAtivo
-    button.Text = boostAtivo and "Boost ON" or "Boost OFF"
-    aplicarBoost()
-end
-
-button.MouseButton1Click:Connect(toggleBoost)
-
+-- Atualiza humanoid ao respawnar
 player.CharacterAdded:Connect(function(char)
     character = char
     humanoid = character:WaitForChild("Humanoid")
-
-    velocidadeNormal = humanoid.WalkSpeed
-    puloNormal = humanoid.JumpPower
-
+    humanoid.WalkSpeed = velocidadeNormal
+    humanoid.UseJumpPower = false
+    humanoid.JumpHeight = puloNormal
     boostAtivo = false
     button.Text = "Boost OFF"
+end)
 
-    -- Espera e reaplica boost para evitar resets iniciais
-    task.wait(0.5)
+-- Função de aplicar boost
+local function aplicarBoost()
+    if not humanoid or not humanoid.Parent then return end
+    humanoid.UseJumpPower = false
     if boostAtivo then
-        aplicarBoost()
-    end
-end)
-
-RunService.Heartbeat:Connect(function()
-    if humanoid and humanoid.Parent then
-        aplicarBoost()
-    end
-end)
+        humanoid.WalkSpeed = velocidadeBoost
+        human

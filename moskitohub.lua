@@ -25,7 +25,7 @@ local boostAtivo = false
 local velocidadeNormal = humanoid.WalkSpeed
 local puloNormal = humanoid.JumpHeight -- novo
 local velocidadeBoost = 60
-local puloBoost = 25 -- JumpHeight boost
+local puloBoost = 40 -- JumpHeight boost
 
 -- Atualiza humanoid ao respawnar
 player.CharacterAdded:Connect(function(char)
@@ -65,3 +65,4 @@ button.MouseButton1Click:Connect(toggleBoost)
 RunService.Heartbeat:Connect(function()
     aplicarBoost()
 end)
+

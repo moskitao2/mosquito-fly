@@ -3,110 +3,144 @@ local player = Players.LocalPlayer
 local char = player.Character or player.CharacterAdded:Wait()
 local hum = char:WaitForChild("Humanoid")
 
--- Estado dos cheats
+-- Cheats state
 local speedHackOn = false
 local jumpHackOn = false
 
--- Valores cheats
+-- Normal values
 local normalWalkSpeed = 16
 local normalJumpPower = 50
 
+-- Hack values
 local hackWalkSpeed = 50
 local hackJumpPower = 100
 
--- Criar GUI simples
-local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+-- GUI
+local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "MoskitoHub"
+screenGui.Parent = player:WaitForChild("PlayerGui")
+screenGui.ResetOnSpawn = false
 
-local frame = Instance.new("Frame", screenGui)
-frame.Size = UDim2.new(0, 220, 0, 140)
-frame.Position = UDim2.new(0, 10, 0, 10)
-frame.BackgroundColor3 = Color3.fromRGB(35,35,35)
+-- Frame
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 240, 0, 180)
+frame.Position = UDim2.new(0, 20, 0, 20)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 frame.BorderSizePixel = 0
+frame.Parent = screenGui
 
-local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1,0,0,25)
+-- Make GUI draggable
+frame.Active = true
+frame.Draggable = true
+
+-- UICorner (rounded corners)
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 6)
+corner.Parent = frame
+
+-- UIStroke (border glow)
+local stroke = Instance.new("UIStroke")
+stroke.Color = Color3.fromRGB(90, 90, 90)
+stroke.Thickness = 1.5
+stroke.Transparency = 0.3
+stroke.Parent = frame
+
+-- Title
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 30)
 title.BackgroundTransparency = 1
-title.Text = "Moskito Hub"
-title.TextColor3 = Color3.new(1,1,1)
-title.Font = Enum.Font.BebasNeue
-title.TextSize = 24
-title.TextStrokeTransparency = 0.5
+title.Text = "🦟 Moskito Hub"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 22
+title.Parent = frame
 
--- Função que cria botões toggle
-local function createToggleBtn(text, posY, callback)
-local btn = Instance.new("TextButton", frame)
-btn.Size = UDim2.new(1, -20, 0, 40)
-btn.Position = UDim2.new(0, 10, 0, posY)
-btn.BackgroundColor3 = Color3.fromRGB(70,130,180)
-btn.TextColor3 = Color3.new(1,1,1)
-btn.Font = Enum.Font.SourceSansBold
-btn.TextSize = 20
-btn.Text = text
-btn.AutoButtonColor = true
+-- Close Button
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 25, 0, 25)
+closeBtn.Position = UDim2.new(1, -30, 0, 2)
+closeBtn.BackgroundColor3 = Color3.fromRGB(170, 0, 0)
+closeBtn.Text = "X"
+closeBtn.TextColor3 = Color3.new(1,1,1)
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 16
+closeBtn.Parent = frame
 
-btn.MouseButton1Click:Connect(function()
-callback(btn)
+local btnCorner = Instance.new("UICorner", closeBtn)
+btnCorner.CornerRadius = UDim.new(0, 5)
+
+closeBtn.MouseButton1Click:Connect(function()
+    screenGui:Destroy()
 end)
-return btn
+
+-- Toggle button creator
+local function createToggleBtn(text, posY, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, -20, 0, 40)
+    btn.Position = UDim2.new(0, 10, 0, posY)
+    btn.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 18
+    btn.Text = text
+    btn.AutoButtonColor = true
+    btn.Parent = frame
+
+    local uicorner = Instance.new("UICorner", btn)
+    uicorner.CornerRadius = UDim.new(0, 6)
+
+    btn.MouseButton1Click:Connect(function()
+        callback(btn)
+    end)
+
+    return btn
 end
 
--- Hook da metatable para burlar o anti-cheat
+-- Bypass anti-cheat (metatable hook)
 local mt = getrawmetatable(game)
 local oldIndex = mt.__index
 setreadonly(mt, false)
 
 mt.__index = function(tbl, key)
-if tbl == hum then
-if key == "WalkSpeed" then
-if speedHackOn then
-return normalWalkSpeed -- finge normal pro anti-cheat
-end
-elseif key == "JumpPower" then
-if jumpHackOn then
-return normalJumpPower -- finge normal pro anti-cheat
-end
-end
-end
-return oldIndex(tbl, key)
+    if tbl == hum then
+        if key == "WalkSpeed" and speedHackOn then
+            return normalWalkSpeed
+        elseif key == "JumpPower" and jumpHackOn then
+            return normalJumpPower
+        end
+    end
+    return oldIndex(tbl, key)
 end
 
 setreadonly(mt, true)
 
--- Função pra aplicar os valores reais ao humanoide
+-- Apply hack values
 local function applyCheats()
-if speedHackOn then
-hum.WalkSpeed = hackWalkSpeed
-else
-hum.WalkSpeed = normalWalkSpeed
+    hum.WalkSpeed = speedHackOn and hackWalkSpeed or normalWalkSpeed
+    hum.JumpPower = jumpHackOn and hackJumpPower or normalJumpPower
 end
 
-if jumpHackOn then
-hum.JumpPower = hackJumpPower
-else
-hum.JumpPower = normalJumpPower
-end
-end
-
--- Cria os botões
+-- Toggle buttons
 local speedBtn = createToggleBtn("Ativar Speed Hack", 40, function(btn)
-speedHackOn = not speedHackOn
-applyCheats()
-btn.Text = speedHackOn and "Desativar Speed Hack" or "Ativar Speed Hack"
+    speedHackOn = not speedHackOn
+    applyCheats()
+    btn.Text = speedHackOn and "Desativar Speed Hack" or "Ativar Speed Hack"
+    btn.BackgroundColor3 = speedHackOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70,130,180)
 end)
 
 local jumpBtn = createToggleBtn("Ativar Jump Hack", 90, function(btn)
-jumpHackOn = not jumpHackOn
-applyCheats()
-btn.Text = jumpHackOn and "Desativar Jump Hack" or "Ativar Jump Hack"
+    jumpHackOn = not jumpHackOn
+    applyCheats()
+    btn.Text = jumpHackOn and "Desativar Jump Hack" or "Ativar Jump Hack"
+    btn.BackgroundColor3 = jumpHackOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70,130,180)
 end)
 
--- Atualiza humanoide quando personagem respawnar
+-- Reapply cheats on respawn
 player.CharacterAdded:Connect(function(character)
-char = character
-hum = char:WaitForChild("Humanoid")
-applyCheats()
+    char = character
+    hum = char:WaitForChild("Humanoid")
+    applyCheats()
 end)
 
--- Aplica cheats no load
+-- Apply on first load
 applyCheats()

@@ -1,69 +1,104 @@
-local Players = game:GetService("Players")
-local UIS = game:GetService("UserInputService")
+local player = game.Players.LocalPlayer
 local RunService = game:GetService("RunService")
 
-local player = Players.LocalPlayer
+-- Cria GUI
+local gui = Instance.new("ScreenGui")
+gui.Name = "moskito hub"
+gui.Parent = player:WaitForChild("PlayerGui")
+
+-- Título
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(0, 200, 0, 40)
+title.Position = UDim2.new(0, 20, 0, 10)
+title.BackgroundTransparency = 1
+title.TextColor3 = Color3.new(1, 1, 1)
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 28
+title.Text = "moskito hub"
+title.Parent = gui
+
+-- Botão Aumentar Velocidade
+local btnUp = Instance.new("TextButton")
+btnUp.Size = UDim2.new(0, 150, 0, 50)
+btnUp.Position = UDim2.new(0, 20, 0, 60)
+btnUp.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+btnUp.TextColor3 = Color3.new(1, 1, 1)
+btnUp.Font = Enum.Font.SourceSansBold
+btnUp.TextSize = 24
+btnUp.Text = "Aumentar Velocidade"
+btnUp.Parent = gui
+
+-- Botão Diminuir Velocidade
+local btnDown = Instance.new("TextButton")
+btnDown.Size = UDim2.new(0, 150, 0, 50)
+btnDown.Position = UDim2.new(0, 20, 0, 120)
+btnDown.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+btnDown.TextColor3 = Color3.new(1, 1, 1)
+btnDown.Font = Enum.Font.SourceSansBold
+btnDown.TextSize = 24
+btnDown.Text = "Diminuir Velocidade"
+btnDown.Parent = gui
+
+-- Botão Toggle Boost
+local btnToggle = Instance.new("TextButton")
+btnToggle.Size = UDim2.new(0, 150, 0, 50)
+btnToggle.Position = UDim2.new(0, 20, 0, 180)
+btnToggle.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+btnToggle.TextColor3 = Color3.new(1, 1, 1)
+btnToggle.Font = Enum.Font.SourceSansBold
+btnToggle.TextSize = 24
+btnToggle.Text = "Boost OFF"
+btnToggle.Parent = gui
+
 local character = player.Character or player.CharacterAdded:Wait()
-local hrp = character:WaitForChild("HumanoidRootPart")
+local humanoid = character:WaitForChild("Humanoid")
 
--- Criar GUI
-local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-gui.Name = "moskitaohub"
+local velocidadeNormal = humanoid.WalkSpeed
+local puloNormal = humanoid.JumpPower
 
-local button = Instance.new("TextButton", gui)
-button.Size = UDim2.new(0, 150, 0, 50)
-button.Position = UDim2.new(0, 20, 0, 20)
-button.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-button.TextColor3 = Color3.new(1, 1, 1)
-button.Font = Enum.Font.SourceSansBold
-button.TextSize = 24
-button.Text = "Boost OFF"
-
--- Variáveis de controle
+local velocidadeAtual = velocidadeNormal
 local boostAtivo = false
-local impulseForce = 50
-local jumping = false
-local moveDirection = Vector3.zero
 
--- Botão de toggle
-button.MouseButton1Click:Connect(function()
-	boostAtivo = not boostAtivo
-	button.Text = boostAtivo and "Boost ON" or "Boost OFF"
+local velocidadeBoost = 60
+local puloBoost = 100
+
+local function atualizarVelocidade()
+    if boostAtivo then
+        humanoid.WalkSpeed = velocidadeBoost
+        humanoid.JumpPower = puloBoost
+    else
+        humanoid.WalkSpeed = velocidadeAtual
+        humanoid.JumpPower = puloNormal
+    end
+end
+
+btnUp.MouseButton1Click:Connect(function()
+    if not boostAtivo then
+        velocidadeAtual = math.min(velocidadeAtual + 5, 100)
+        atualizarVelocidade()
+    end
 end)
 
--- Captura input WASD
-UIS.InputBegan:Connect(function(input, gpe)
-	if gpe then return end
-	if input.KeyCode == Enum.KeyCode.Space then
-		jumping = true
-	end
+btnDown.MouseButton1Click:Connect(function()
+    if not boostAtivo then
+        velocidadeAtual = math.max(velocidadeAtual - 5, 10)
+        atualizarVelocidade()
+    end
 end)
 
-UIS.InputEnded:Connect(function(input, gpe)
-	if gpe then return end
-	if input.KeyCode == Enum.KeyCode.Space then
-		jumping = false
-	end
+btnToggle.MouseButton1Click:Connect(function()
+    boostAtivo = not boostAtivo
+    btnToggle.Text = boostAtivo and "Boost ON" or "Boost OFF"
+    atualizarVelocidade()
 end)
 
--- Atualiza moveDirection constantemente
-RunService.RenderStepped:Connect(function()
-	if not boostAtivo then return end
-
-	character = player.Character or player.CharacterAdded:Wait()
-	hrp = character:FindFirstChild("HumanoidRootPart")
-	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	if not hrp or not humanoid then return end
-
-	-- Pegar direção da câmera
-	local camCF = workspace.CurrentCamera.CFrame
-	local moveVec = UIS:IsKeyDown(Enum.KeyCode.W) and camCF.LookVector or Vector3.zero
-	if moveVec.Magnitude > 0 then
-		hrp.Velocity = Vector3.new(moveVec.X, hrp.Velocity.Y, moveVec.Z) * impulseForce
-	end
-
-	-- Pulo controlado
-	if jumping and humanoid:GetState() == Enum.HumanoidStateType.Running then
-		humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-	end
+player.CharacterAdded:Connect(function(char)
+    character = char
+    humanoid = character:WaitForChild("Humanoid")
+    velocidadeNormal = humanoid.WalkSpeed
+    puloNormal = humanoid.JumpPower
+    velocidadeAtual = velocidadeNormal
+    boostAtivo = false
+    btnToggle.Text = "Boost OFF"
+    atualizarVelocidade()
 end)

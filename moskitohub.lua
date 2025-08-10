@@ -35,7 +35,7 @@ Instance.new("UIStroke", frame).Color = Color3.fromRGB(90, 90, 90)
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1, 0, 0, 30)
 title.BackgroundTransparency = 1
-title.Text = "🦟 Moskito Hub"
+title.Text = "🦟 bolsonarogay"
 title.TextColor3 = Color3.new(1, 1, 1)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 22
@@ -134,3 +134,4 @@ end)
 
 -- Aplicar no load
 applyCheats()
+

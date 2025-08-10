@@ -15,37 +15,31 @@ local normalJumpPower = 50
 local hackWalkSpeed = 50
 local hackJumpPower = 100
 
--- GUI
+-- GUI setup
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "MoskitoHub"
 screenGui.Parent = player:WaitForChild("PlayerGui")
 screenGui.ResetOnSpawn = false
 
--- Frame
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0, 240, 0, 180)
 frame.Position = UDim2.new(0, 20, 0, 20)
 frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 frame.BorderSizePixel = 0
 frame.Parent = screenGui
-
--- Make GUI draggable
 frame.Active = true
 frame.Draggable = true
 
--- UICorner (rounded corners)
 local corner = Instance.new("UICorner")
 corner.CornerRadius = UDim.new(0, 6)
 corner.Parent = frame
 
--- UIStroke (border glow)
 local stroke = Instance.new("UIStroke")
 stroke.Color = Color3.fromRGB(90, 90, 90)
 stroke.Thickness = 1.5
 stroke.Transparency = 0.3
 stroke.Parent = frame
 
--- Title
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 30)
 title.BackgroundTransparency = 1
@@ -55,7 +49,6 @@ title.Font = Enum.Font.GothamBold
 title.TextSize = 22
 title.Parent = frame
 
--- Close Button
 local closeBtn = Instance.new("TextButton")
 closeBtn.Size = UDim2.new(0, 25, 0, 25)
 closeBtn.Position = UDim2.new(1, -30, 0, 2)

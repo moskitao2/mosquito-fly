@@ -1,4 +1,3 @@
--- Serviços
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
@@ -7,6 +6,7 @@ local LocalPlayer = Players.LocalPlayer
 local speedHackOn = false
 local jumpHackOn = false
 local espOn = false
+local espAdorns = {} -- Table to store ESP adornments
 
 -- Valores normais
 local normalWalkSpeed = 16
@@ -124,6 +124,7 @@ end
 
 local function addESPToChar(char)
     if not char then return end
+    espAdorns[char] = {} -- Initialize table for this character
     for _, part in ipairs(char:GetDescendants()) do
         if (part:IsA("BasePart") or part:IsA("MeshPart")) then
             local adorn = Instance.new("BoxHandleAdornment")
@@ -135,27 +136,41 @@ local function addESPToChar(char)
             adorn.AlwaysOnTop = true -- vê através de paredes!
             adorn.ZIndex = 15
             adorn.Parent = part
+            table.insert(espAdorns[char], adorn) -- Store the adornment
         end
     end
 end
 
-local function updateESPAll()
-    for _, player in ipairs(Players:GetPlayers()) do
-        local char = player.Character
-        if char then
-            clearESP(char)
-            if espOn then
-                addESPToChar(char)
+local function updateESP(char)
+    if not char then return end
+    if espOn then
+        if not espAdorns[char] then
+            addESPToChar(char)
+        end
+        for _, adorn in ipairs(espAdorns[char]) do
+            if adorn and adorn.Adornee then
+                local part = adorn.Adornee
+                adorn.Size = part.Size + Vector3.new(0.3, 0.3, 0.3)
             end
         end
+    else
+        clearESP(char)
+        espAdorns[char] = nil -- Remove the character's adornments from the table
     end
+end
+
+local function onCharacterAdded(player, char)
+    RunService.RenderStepped:Wait()
+    updateESP(char)
 end
 
 local function setupCharacterAdded()
     for _, player in ipairs(Players:GetPlayers()) do
+        if player.Character then
+            onCharacterAdded(player, player.Character)
+        end
         player.CharacterAdded:Connect(function(char)
-            RunService.RenderStepped:Wait()
-            updateESPAll()
+            onCharacterAdded(player, char)
         end)
     end
 end
@@ -163,8 +178,7 @@ setupCharacterAdded()
 
 Players.PlayerAdded:Connect(function(player)
     player.CharacterAdded:Connect(function(char)
-        RunService.RenderStepped:Wait()
-        updateESPAll()
+        onCharacterAdded(player, char)
     end)
 end)
 
@@ -178,7 +192,10 @@ end
 
 local espBtn = createToggleBtn("Ativar ESP (box neon)", 50, function(btn)
     espOn = not espOn
-    updateESPAll()
+    local char = LocalPlayer.Character
+    if char then
+        updateESP(char)
+    end
     btn.Text = espOn and "Desativar ESP (box neon)" or "Ativar ESP (box neon)"
     btn.BackgroundColor3 = espOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70, 130, 180)
     espBtn._on = espOn
@@ -186,7 +203,6 @@ end)
 
 local speedBtn = createToggleBtn("Ativar Speed Hack", 100, function(btn)
     speedHackOn = not speedHackOn
-    applyLocalCheats()
     btn.Text = speedHackOn and "Desativar Speed Hack" or "Ativar Speed Hack"
     btn.BackgroundColor3 = speedHackOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70, 130, 180)
     speedBtn._on = speedHackOn
@@ -194,7 +210,6 @@ end)
 
 local jumpBtn = createToggleBtn("Ativar Jump Hack", 150, function(btn)
     jumpHackOn = not jumpHackOn
-    applyLocalCheats()
     btn.Text = jumpHackOn and "Desativar Jump Hack" or "Ativar Jump Hack"
     btn.BackgroundColor3 = jumpHackOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70, 130, 180)
     jumpBtn._on = jumpHackOn
@@ -202,12 +217,18 @@ end)
 
 LocalPlayer.CharacterAdded:Connect(function(character)
     applyLocalCheats()
-    updateESPAll()
+    updateESP(character)
 end)
 
 RunService.RenderStepped:Connect(function()
-    if espOn then updateESPAll() end
+    applyLocalCheats() -- Apply speed and jump hacks every frame
+    local char = LocalPlayer.Character
+    if char then
+        updateESP(char) -- Update ESP for the local character
+    end
 end)
 
 applyLocalCheats()
-updateESPAll()
+if LocalPlayer.Character then
+    updateESP(LocalPlayer.Character)
+end

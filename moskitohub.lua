@@ -44,4 +44,24 @@ local function aplicarBoost()
     humanoid.UseJumpPower = false
     if boostAtivo then
         humanoid.WalkSpeed = velocidadeBoost
-        human
+        humanoid.JumpHeight = puloBoost
+    else
+        humanoid.WalkSpeed = velocidadeNormal
+        humanoid.JumpHeight = puloNormal
+    end
+end
+
+-- Alternar boost
+local function toggleBoost()
+    boostAtivo = not boostAtivo
+    button.Text = boostAtivo and "Boost ON" or "Boost OFF"
+    aplicarBoost()
+end
+
+-- Conectar botão
+button.MouseButton1Click:Connect(toggleBoost)
+
+-- Loop para manter o boost (bypass)
+RunService.Heartbeat:Connect(function()
+    aplicarBoost()
+end)

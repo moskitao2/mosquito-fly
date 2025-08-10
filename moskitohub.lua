@@ -245,38 +245,41 @@ LocalPlayer.CharacterAdded:Connect(function(char)
 end)
 
 -- 🛡️ Proteção Anti-Kick / Anti-AntiCheat / Hook __namecall
-local oldNamecall
-oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
-    local method = getnamecallmethod()
-    local args = {...}
+if not _G.MoskitoHubHooked then
+    _G.MoskitoHubHooked = true
 
-    -- Bloqueia :Kick() no LocalPlayer
-    if method == "Kick" and self == LocalPlayer then
-        warn("[MoskitoHub] ⚠️ Kick bloqueado.")
-        return nil
-    end
+    local oldNamecall
+    oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+        local method = getnamecallmethod()
+        local args = {...}
 
-    -- Bloqueia :Destroy() no jogador
-    if method == "Destroy" and self == LocalPlayer then
-        warn("[MoskitoHub] ⚠️ Destroy bloqueado.")
-        return nil
-    end
-
-    -- Bloqueia :BreakJoints() no personagem
-    if method == "BreakJoints" and self == LocalPlayer.Character then
-        warn("[MoskitoHub] ⚠️ BreakJoints bloqueado.")
-        return nil
-    end
-
-    -- Bloqueia remotes suspeitos (anticheat etc)
-    if (self:IsA("RemoteEvent") or self:IsA("RemoteFunction")) and method:lower():find("server") then
-        local name = self.Name:lower()
-        if name:find("anticheat") or name:find("report") or name:find("ban") then
-            warn("[MoskitoHub] ⚠️ Remote suspeito bloqueado:", self.Name)
+        -- Bloqueia :Kick() no LocalPlayer
+        if method == "Kick" and self == LocalPlayer then
+            warn("[MoskitoHub] ⚠️ Kick bloqueado.")
             return nil
         end
-    end
 
-    return oldNamecall(self, ...)
-end))
+        -- Bloqueia :Destroy() no jogador
+        if method == "Destroy" and self == LocalPlayer then
+            warn("[MoskitoHub] ⚠️ Destroy bloqueado.")
+            return nil
+        end
 
+        -- Bloqueia :BreakJoints() no personagem
+        if method == "BreakJoints" and self == LocalPlayer.Character then
+            warn("[MoskitoHub] ⚠️ BreakJoints bloqueado.")
+            return nil
+        end
+
+        -- Bloqueia remotes suspeitos (anticheat etc)
+        if (self:IsA("RemoteEvent") or self:IsA("RemoteFunction")) and method:lower():find("server") then
+            local name = self.Name:lower()
+            if name:find("anticheat") or name:find("report") or name:find("ban") then
+                warn("[MoskitoHub] ⚠️ Remote suspeito bloqueado:", self.Name)
+                return nil
+            end
+        end
+
+        return oldNamecall(self, ...)
+    end))
+end

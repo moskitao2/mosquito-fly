@@ -2,8 +2,6 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
-local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local hum = char:WaitForChild("Humanoid")
 
 -- Estados dos cheats
 local speedHackOn = false
@@ -20,10 +18,14 @@ local normalJumpPower = 50
 local hackWalkSpeed = 50
 local hackJumpPower = 100
 
+local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local hum = char:FindFirstChildOfClass("Humanoid") or char:WaitForChild("Humanoid")
+
 -- GUI
-local screenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "MoskitoHub"
 screenGui.ResetOnSpawn = false
+screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame", screenGui)
 frame.Size = UDim2.new(0, 240, 0, 260)
@@ -87,6 +89,7 @@ local function ApplyESPToChar(apply)
                     part.Color = Color3.new(1, 0, 0)
                     part.Material = Enum.Material.Neon
                 else
+                    -- Restaurar cor padrão (ajuste conforme seu jogo se necessário)
                     part.Color = part.Name == "Head" and Color3.new(1, 0.8, 0.6) or Color3.new(1, 1, 1)
                     part.Material = Enum.Material.Plastic
                 end
@@ -96,10 +99,12 @@ local function ApplyESPToChar(apply)
 end
 
 -- Função para aplicar ESP Jump (pula automaticamente quando ativado)
+local espJumpConn = nil
 local function ESPJump(active)
+    if espJumpConn then espJumpConn:Disconnect() espJumpConn = nil end
     if active then
-        RunService.RenderStepped:Connect(function()
-            if espJumpOn and hum and hum.Parent and hum:GetState() == Enum.HumanoidStateType.Freefall then
+        espJumpConn = RunService.RenderStepped:Connect(function()
+            if hum and hum.Parent and hum:GetState() == Enum.HumanoidStateType.Freefall then
                 hum:ChangeState(Enum.HumanoidStateType.Jumping)
             end
         end)
@@ -107,10 +112,12 @@ local function ESPJump(active)
 end
 
 -- Função para aplicar ESP Run (corre automaticamente quando ativado)
+local espRunConn = nil
 local function ESPRun(active)
+    if espRunConn then espRunConn:Disconnect() espRunConn = nil end
     if active then
-        RunService.RenderStepped:Connect(function()
-            if espRunOn and hum and hum.Parent then
+        espRunConn = RunService.RenderStepped:Connect(function()
+            if hum and hum.Parent then
                 hum.WalkSpeed = hackWalkSpeed
             end
         end)
@@ -225,21 +232,13 @@ end
 -- Reaplicar cheats ao morrer
 LocalPlayer.CharacterAdded:Connect(function(character)
     char = character
-    hum = character:WaitForChild("Humanoid", 10)
-    if hum then
-        applyCheats()
-        if espOn then
-            ApplyESPToChar(true)
-        end
+    hum = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid", 10)
+    applyCheats()
+    if espOn then
+        ApplyESPToChar(true)
     end
-end)
-
-RunService.RenderStepped:Connect(function()
-    if hum and hum.Parent then
-        if speedHackOn then hum.WalkSpeed = hackWalkSpeed end
-        if jumpHackOn then hum.JumpPower = hackJumpPower end
-        if espRunOn then hum.WalkSpeed = hackWalkSpeed end
-    end
+    ESPJump(espJumpOn)
+    ESPRun(espRunOn)
 end)
 
 applyCheats()

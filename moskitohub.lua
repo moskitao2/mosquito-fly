@@ -125,7 +125,7 @@ local function getClosestEnemy()
     return closestEnemy
 end
 
--- Aimbot dispara ao clicar
+-- Aimbot dispara ao clicar (só printa por enquanto)
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.UserInputType == Enum.UserInputType.MouseButton1 and aimbotOn then
@@ -167,6 +167,7 @@ local aimbotBtn = createToggleBtn("Ativar Aimbot", 150, function(btn)
     btn.BackgroundColor3 = aimbotOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70, 130, 180)
     aimbotBtn._on = aimbotOn
 end)
+
 local espOn = false
 local espAdorns = {}
 
@@ -237,4 +238,19 @@ local espBtn = createToggleBtn("Ativar ESP (atrás paredes)", 200, function(btn)
     btn.Text = espOn and "Desativar ESP (atrás paredes)" or "Ativar ESP (atrás paredes)"
     btn.BackgroundColor3 = espOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70, 130, 180)
     espBtn._on = espOn
+end)
+
+-- === NOVA PARTE: Aimbot mira suave ===
+local Camera = workspace.CurrentCamera
+
+RunService.RenderStepped:Connect(function()
+    if aimbotOn then
+        local enemy = getClosestEnemy()
+        if enemy and enemy.Character and enemy.Character:FindFirstChild("HumanoidRootPart") then
+            local targetPos = enemy.Character.HumanoidRootPart.Position
+            local currentCFrame = Camera.CFrame
+            local desiredCFrame = CFrame.new(currentCFrame.Position, targetPos)
+            Camera.CFrame = currentCFrame:Lerp(desiredCFrame, 0.25) -- Ajuste a velocidade aqui
+        end
+    end
 end)

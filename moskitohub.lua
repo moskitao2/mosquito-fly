@@ -1,12 +1,12 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
 -- Estados
 local speedHackOn = false
 local jumpHackOn = false
-local espOn = false
-local espAdorns = {}
+local aimbotOn = false
 
 -- Valores normais e hack
 local normalWalkSpeed = 16
@@ -103,7 +103,74 @@ local function createToggleBtn(text, posY, callback)
     return btn
 end
 
--- ESP
+-- Aimbot: pega inimigo mais próximo
+local function getClosestEnemy()
+    local closestEnemy = nil
+    local shortestDistance = math.huge
+    local myChar = LocalPlayer.Character
+    if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return nil end
+    local myPos = myChar.HumanoidRootPart.Position
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local enemyPos = player.Character.HumanoidRootPart.Position
+            local dist = (enemyPos - myPos).Magnitude
+            if dist < shortestDistance then
+                shortestDistance = dist
+                closestEnemy = player
+            end
+        end
+    end
+
+    return closestEnemy
+end
+
+-- Aimbot dispara ao clicar
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 and aimbotOn then
+        local enemy = getClosestEnemy()
+        if enemy and enemy.Character and enemy.Character:FindFirstChild("Humanoid") then
+            print("[Aimbot] Atirando em:", enemy.Name)
+            -- enemy.Character.Humanoid:TakeDamage(25) -- apenas local, sem efeito real
+        end
+    end
+end)
+
+-- Atualizações constantes
+RunService.Stepped:Connect(function()
+    local char, hum = getCharAndHum(LocalPlayer)
+    if hum then
+        if speedHackOn then hum.WalkSpeed = hackWalkSpeed end
+        if jumpHackOn then hum.JumpPower = hackJumpPower end
+    end
+end)
+
+-- Botões
+local speedBtn = createToggleBtn("Ativar Speed Hack", 50, function(btn)
+    speedHackOn = not speedHackOn
+    btn.Text = speedHackOn and "Desativar Speed Hack" or "Ativar Speed Hack"
+    btn.BackgroundColor3 = speedHackOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70, 130, 180)
+    speedBtn._on = speedHackOn
+end)
+
+local jumpBtn = createToggleBtn("Ativar Jump Hack", 100, function(btn)
+    jumpHackOn = not jumpHackOn
+    btn.Text = jumpHackOn and "Desativar Jump Hack" or "Ativar Jump Hack"
+    btn.BackgroundColor3 = jumpHackOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70, 130, 180)
+    jumpBtn._on = jumpHackOn
+end)
+
+local aimbotBtn = createToggleBtn("Ativar Aimbot", 150, function(btn)
+    aimbotOn = not aimbotOn
+    btn.Text = aimbotOn and "Desativar Aimbot" or "Ativar Aimbot"
+    btn.BackgroundColor3 = aimbotOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70, 130, 180)
+    aimbotBtn._on = aimbotOn
+end)
+local espOn = false
+local espAdorns = {}
+
+-- Limpa ESP de um character
 local function clearESP(char)
     if not char then return end
     for _, part in ipairs(char:GetDescendants()) do
@@ -114,6 +181,7 @@ local function clearESP(char)
     end
 end
 
+-- Adiciona ESP mesmo em partes invisíveis
 local function addESPToChar(char)
     if not char then return end
     espAdorns[char] = {}
@@ -121,18 +189,19 @@ local function addESPToChar(char)
         if part:IsA("BasePart") then
             local adorn = Instance.new("BoxHandleAdornment")
             adorn.Name = "_MoskitoESP"
-            adorn.Size = part.Size + Vector3.new(0.3,0.3,0.3)
+            adorn.Size = part.Size + Vector3.new(0.2, 0.2, 0.2)
             adorn.Color3 = Color3.fromRGB(0, 255, 160)
-            adorn.Transparency = 0.5
-            adorn.Adornee = part
+            adorn.Transparency = 0.4
             adorn.AlwaysOnTop = true
             adorn.ZIndex = 15
+            adorn.Adornee = part
             adorn.Parent = part
             table.insert(espAdorns[char], adorn)
         end
     end
 end
 
+-- Atualiza ESP para todos os players
 local function updateESPForAll()
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character then
@@ -148,19 +217,12 @@ local function updateESPForAll()
     end
 end
 
--- Atualizações constantes
-RunService.Stepped:Connect(function()
-    local char, hum = getCharAndHum(LocalPlayer)
-    if hum then
-        if speedHackOn then hum.WalkSpeed = hackWalkSpeed end
-        if jumpHackOn then hum.JumpPower = hackJumpPower end
-    end
-end)
-
+-- Atualiza a cada frame (RenderStepped)
 RunService.RenderStepped:Connect(function()
     updateESPForAll()
 end)
 
+-- Quando players entram
 Players.PlayerAdded:Connect(function(player)
     player.CharacterAdded:Connect(function(char)
         if espOn then
@@ -169,106 +231,10 @@ Players.PlayerAdded:Connect(function(player)
     end)
 end)
 
--- Botões
-local espBtn = createToggleBtn("Ativar ESP (box neon)", 50, function(btn)
+-- Botão do ESP
+local espBtn = createToggleBtn("Ativar ESP (atrás paredes)", 200, function(btn)
     espOn = not espOn
-    btn.Text = espOn and "Desativar ESP (box neon)" or "Ativar ESP (box neon)"
+    btn.Text = espOn and "Desativar ESP (atrás paredes)" or "Ativar ESP (atrás paredes)"
     btn.BackgroundColor3 = espOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70, 130, 180)
     espBtn._on = espOn
 end)
-
-local speedBtn = createToggleBtn("Ativar Speed Hack", 100, function(btn)
-    speedHackOn = not speedHackOn
-    btn.Text = speedHackOn and "Desativar Speed Hack" or "Ativar Speed Hack"
-    btn.BackgroundColor3 = speedHackOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70, 130, 180)
-    speedBtn._on = speedHackOn
-end)
-
-local jumpBtn = createToggleBtn("Ativar Jump Hack", 150, function(btn)
-    jumpHackOn = not jumpHackOn
-    btn.Text = jumpHackOn and "Desativar Jump Hack" or "Ativar Jump Hack"
-    btn.BackgroundColor3 = jumpHackOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70, 130, 180)
-    jumpBtn._on = jumpHackOn
-end)
-
--- 🛡️ Hook __index (bypass leitura)
-if not _G.MoskitoHubIndexHooked then
-    _G.MoskitoHubIndexHooked = true
-    local mt = getrawmetatable(game)
-    setreadonly(mt, false)
-    local oldIndex = mt.__index
-    mt.__index = newcclosure(function(tbl, key)
-        if typeof(tbl) == "Instance" and tbl:IsA("Humanoid") then
-            if key == "WalkSpeed" and speedHackOn then
-                return normalWalkSpeed
-            end
-            if key == "JumpPower" and jumpHackOn then
-                return normalJumpPower
-            end
-            if key == "JumpHeight" and jumpHackOn then
-                return 7.2 -- valor padrão
-            end
-        end
-        return oldIndex(tbl, key)
-    end)
-    setreadonly(mt, true)
-end
-
--- 🛡️ Hook __newindex (bloqueia mudanças)
-if not _G.MoskitoHubNewIndexHooked then
-    _G.MoskitoHubNewIndexHooked = true
-    local mt = getrawmetatable(game)
-    setreadonly(mt, false)
-    local oldNewIndex = mt.__newindex
-    mt.__newindex = newcclosure(function(tbl, key, val)
-        if typeof(tbl) == "Instance" and tbl:IsA("Humanoid") then
-            if key == "WalkSpeed" and speedHackOn and val ~= hackWalkSpeed then
-                warn("[MoskitoHub] ⚠️ Bloqueado alteração de WalkSpeed:", val)
-                return
-            end
-            if key == "JumpPower" and jumpHackOn and val ~= hackJumpPower then
-                warn("[MoskitoHub] ⚠️ Bloqueado alteração de JumpPower:", val)
-                return
-            end
-            if key == "JumpHeight" and jumpHackOn then
-                warn("[MoskitoHub] ⚠️ Bloqueado alteração de JumpHeight:", val)
-                return
-            end
-            if key == "UseJumpPower" and jumpHackOn and val == false then
-                warn("[MoskitoHub] ⚠️ Tentaram desativar UseJumpPower")
-                return
-            end
-        end
-        return oldNewIndex(tbl, key, val)
-    end)
-    setreadonly(mt, true)
-end
-
--- 🛡️ Hook __namecall (anti-kick / anti-anticheat)
-if not _G.MoskitoHubHooked then
-    _G.MoskitoHubHooked = true
-    local oldNamecall
-    oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
-        local method = getnamecallmethod()
-        if method == "Kick" and self == LocalPlayer then
-            warn("[MoskitoHub] ⚠️ Kick bloqueado.")
-            return nil
-        end
-        if method == "Destroy" and self == LocalPlayer then
-            warn("[MoskitoHub] ⚠️ Destroy bloqueado.")
-            return nil
-        end
-        if method == "BreakJoints" and self == LocalPlayer.Character then
-            warn("[MoskitoHub] ⚠️ BreakJoints bloqueado.")
-            return nil
-        end
-        if (self:IsA("RemoteEvent") or self:IsA("RemoteFunction")) and method:lower():find("server") then
-            local name = self.Name:lower()
-            if name:find("anticheat") or name:find("report") or name:find("ban") then
-                warn("[MoskitoHub] ⚠️ Remote suspeito bloqueado:", self.Name)
-                return nil
-            end
-        end
-        return oldNamecall(self, ...)
-    end))
-end

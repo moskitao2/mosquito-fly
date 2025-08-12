@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
 -- Estados
@@ -7,8 +8,10 @@ local speedHackOn = false
 local jumpHackOn = false
 local espOn = false
 local espHighlightOn = false
+local aimbotOn = false
 local espAdorns = {}
 local highlightRefs = {}
+local aimbotConnection
 
 -- Valores normais e hack
 local normalWalkSpeed = 16
@@ -30,7 +33,7 @@ screenGui.ResetOnSpawn = false
 screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 260, 0, 250)
+frame.Size = UDim2.new(0, 260, 0, 290) -- Aumentei a altura pra caber botão novo
 frame.Position = UDim2.new(0, 40, 0, 40)
 frame.BackgroundColor3 = Color3.fromRGB(32, 39, 54)
 frame.BorderSizePixel = 0
@@ -191,8 +194,8 @@ end
 RunService.Stepped:Connect(function()
     local char, hum = getCharAndHum(LocalPlayer)
     if hum then
-        if speedHackOn then hum.WalkSpeed = hackWalkSpeed end
-        if jumpHackOn then hum.JumpPower = hackJumpPower end
+        if speedHackOn then hum.WalkSpeed = hackWalkSpeed else hum.WalkSpeed = normalWalkSpeed end
+        if jumpHackOn then hum.JumpPower = hackJumpPower else hum.JumpPower = normalJumpPower end
     end
 end)
 
@@ -206,6 +209,61 @@ Players.PlayerAdded:Connect(function(player)
         if espHighlightOn then addHighlightESPToChar(char) end
     end)
 end)
+
+-- Função para pegar inimigo mais próximo
+local function getClosestEnemy()
+    local camera = workspace.CurrentCamera
+    local closest = nil
+    local shortestDist = math.huge
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+            local headPos = player.Character.Head.Position
+            local dist = (camera.CFrame.Position - headPos).Magnitude
+            if dist < shortestDist then
+                shortestDist = dist
+                closest = player
+            end
+        end
+    end
+
+    return closest
+end
+
+-- Toggle Aimbot
+local function toggleAimbot(btn)
+    aimbotOn = not aimbotOn
+    btn.Text = aimbotOn and "Desativar Aimbot" or "Ativar Aimbot"
+    btn.BackgroundColor3 = aimbotOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70, 130, 180)
+    btn._on = aimbotOn
+
+    if aimbotOn then
+        aimbotConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+            if gameProcessed then return end
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                local character = LocalPlayer.Character
+                if not character then return end
+
+                local tool = character:FindFirstChildOfClass("Tool")
+                if tool then
+                    local enemy = getClosestEnemy()
+                    if enemy and enemy.Character and enemy.Character:FindFirstChild("Head") then
+                        local hrp = character:FindFirstChild("HumanoidRootPart")
+                        if hrp then
+                            hrp.CFrame = CFrame.new(hrp.Position, enemy.Character.Head.Position)
+                        end
+                        tool:Activate()
+                    end
+                end
+            end
+        end)
+    else
+        if aimbotConnection then
+            aimbotConnection:Disconnect()
+            aimbotConnection = nil
+        end
+    end
+end
 
 -- Botões
 local espBtn = createToggleBtn("Ativar ESP (box neon)", 50, function(btn)
@@ -235,3 +293,5 @@ local jumpBtn = createToggleBtn("Ativar Jump Hack", 200, function(btn)
     btn.BackgroundColor3 = jumpHackOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70, 130, 180)
     jumpBtn._on = jumpHackOn
 end)
+
+local aimbotBtn = createToggleBtn("Ativar Aimbot", 250, toggleAimbot)

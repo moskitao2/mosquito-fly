@@ -1,46 +1,42 @@
 pcall(function()
     local Players = game:GetService("Players")
     local RunService = game:GetService("RunService")
-    local UserInputService = game:GetService("UserInputService")
     local TweenService = game:GetService("TweenService")
 
     local LocalPlayer = Players.LocalPlayer or Players:GetPlayers()[1]
-    repeat wait() until LocalPlayer and LocalPlayer.Character and LocalPlayer:FindFirstChild("PlayerGui")
+    repeat task.wait() until LocalPlayer and LocalPlayer.Character and LocalPlayer:FindFirstChild("PlayerGui")
 
     local character = LocalPlayer.Character
     local humanoid = character:WaitForChild("Humanoid")
     local hrp = character:WaitForChild("HumanoidRootPart")
-    local backpack = LocalPlayer:WaitForChild("Backpack")
 
-    local speedCoilName = "Speed Coil"
+    -- Estados
     local speedHackOn = false
-    local normalJumpPower = 50
-    local hackJumpPower = 100
-    local jumpHackOn = false
-
-    local minSpeedNormal = 37
-    local maxSpeedNormal = 42
-    local minSpeedBoost = 50
-    local maxSpeedBoost = 60
-    local minSpeed = minSpeedNormal
-    local maxSpeed = maxSpeedNormal
+    local minSpeedNormal, maxSpeedNormal = 37, 42
+    local minSpeedBoost,  maxSpeedBoost  = 50, 60
+    local minSpeed, maxSpeed = minSpeedNormal, maxSpeedNormal
     local acceleration = 0.15
     local currentSpeed = 0
-    local moveDir = Vector3.zero
     local tickOffset = math.random()
 
+    -- Função para criar força
     local function criarForca()
-        local existing = hrp:FindFirstChild("SpeedAssist")
-        if existing then existing:Destroy() end
+        if hrp:FindFirstChild("SpeedAssist") then
+            hrp.SpeedAssist:Destroy()
+        end
+        if hrp:FindFirstChild("SpeedAssistAttachment") then
+            hrp.SpeedAssistAttachment:Destroy()
+        end
 
-        local att = Instance.new("Attachment", hrp)
+        local att = Instance.new("Attachment")
         att.Name = "SpeedAssistAttachment"
+        att.Parent = hrp
 
         local vf = Instance.new("VectorForce")
         vf.Name = "SpeedAssist"
         vf.Attachment0 = att
         vf.Force = Vector3.zero
-        vf.RelativeTo = Enum.ActuatorRelativeTo.World
+        vf.RelativeTo = Enum.ActuatorRelativeTo.Attachment0
         vf.ApplyAtCenterOfMass = true
         vf.Parent = hrp
 
@@ -49,18 +45,7 @@ pcall(function()
 
     local vectorForce = criarForca()
 
-    local function ativarBuff()
-        local tool = backpack:FindFirstChild(speedCoilName) or LocalPlayer.StarterGear:FindFirstChild(speedCoilName)
-        if tool then
-            tool.Parent = backpack
-            humanoid:EquipTool(tool)
-            task.wait(0.1)
-            humanoid:UnequipTools()
-        else
-            warn("Speed Coil não encontrado")
-        end
-    end
-
+    -- Quando respawnar
     LocalPlayer.CharacterAdded:Connect(function(char)
         character = char
         humanoid = char:WaitForChild("Humanoid")
@@ -68,19 +53,19 @@ pcall(function()
         vectorForce = criarForca()
     end)
 
+    -- Liga/desliga speed
     local function setSpeedHackState(state)
         speedHackOn = state
         if speedHackOn then
-            ativarBuff()
-            minSpeed = minSpeedBoost
-            maxSpeed = maxSpeedBoost
+            minSpeed, maxSpeed = minSpeedBoost, maxSpeedBoost
         else
             vectorForce.Force = Vector3.zero
-            minSpeed = minSpeedNormal
-            maxSpeed = maxSpeedNormal
+            minSpeed, maxSpeed = minSpeedNormal, maxSpeedNormal
+            currentSpeed = 0
         end
     end
 
+    -- UI
     local gui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
     gui.Name = "SpeedUI"
 
@@ -105,44 +90,25 @@ pcall(function()
     button.MouseButton1Click:Connect(function()
         speedHackOn = not speedHackOn
         setSpeedHackState(speedHackOn)
-
         button.Text = speedHackOn and "Speed Hack: ON" or "Speed Hack: OFF"
         local newColor = speedHackOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70, 130, 180)
         TweenService:Create(button, TweenInfo.new(0.3), {BackgroundColor3 = newColor}):Play()
     end)
 
-    UserInputService.InputBegan:Connect(function(input, gp)
-        if gp then return end
-        local k = input.KeyCode
-        if k == Enum.KeyCode.W then moveDir += Vector3.new(0,0,-1) end
-        if k == Enum.KeyCode.S then moveDir += Vector3.new(0,0,1) end
-        if k == Enum.KeyCode.A then moveDir += Vector3.new(-1,0,0) end
-        if k == Enum.KeyCode.D then moveDir += Vector3.new(1,0,0) end
-    end)
-
-    UserInputService.InputEnded:Connect(function(input)
-        local k = input.KeyCode
-        if k == Enum.KeyCode.W then moveDir -= Vector3.new(0,0,-1) end
-        if k == Enum.KeyCode.S then moveDir -= Vector3.new(0,0,1) end
-        if k == Enum.KeyCode.A then moveDir -= Vector3.new(-1,0,0) end
-        if k == Enum.KeyCode.D then moveDir -= Vector3.new(1,0,0) end
-    end)
-
+    -- Movimento usando MoveDirection (mais estável)
     RunService.Heartbeat:Connect(function()
-        if not speedHackOn then return end
-        local dir = moveDir.Magnitude > 0 and moveDir.Unit or Vector3.zero
-        local worldDir = hrp.CFrame:VectorToWorldSpace(dir)
-        local time = tick()
-        local variation = (math.sin(time * 2 + tickOffset) + 1) / 2
-        local targetSpeed = minSpeed + ((maxSpeed - minSpeed) * variation)
-        currentSpeed = currentSpeed + ((targetSpeed - currentSpeed) * acceleration)
-        local force = Vector3.new(worldDir.X, 0, worldDir.Z) * currentSpeed * humanoid.Mass
-        vectorForce.Force = force
-    end)
+        if not speedHackOn or not humanoid or not hrp then return end
 
-    RunService.Stepped:Connect(function()
-        if humanoid then
-            humanoid.JumpPower = jumpHackOn and hackJumpPower or normalJumpPower
+        local dir = humanoid.MoveDirection
+        if dir.Magnitude > 0 then
+            local variation = (math.sin(tick() * 2 + tickOffset) + 1) / 2
+            local targetSpeed = minSpeed + ((maxSpeed - minSpeed) * variation)
+            currentSpeed += (targetSpeed - currentSpeed) * acceleration
+            local force = Vector3.new(dir.X, 0, dir.Z) * currentSpeed * humanoid.Mass
+            vectorForce.Force = force
+        else
+            vectorForce.Force = Vector3.zero
+            currentSpeed = 0
         end
     end)
 end)

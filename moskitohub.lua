@@ -1,10 +1,3 @@
-Aqui está o **script completo com o delta aplicado corretamente**, pronto para colar no **Delta Executor** ou qualquer outro executor compatível com metamethods (`hookmetamethod`, `getrawmetatable`, etc.):
-
----
-
-### ✅ **MoskitoHub - Versão Corrigida (Delta Ready)**
-
-```lua
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
@@ -198,15 +191,35 @@ local jumpBtn = createToggleBtn("Ativar Jump Hack", 150, function(btn)
     jumpBtn._on = jumpHackOn
 end)
 
--- 🛡️ Proteção __newindex (Delta compatível)
-if not _G.MoskitoHubNewIndexHooked then
-    _G.MoskitoHubNewIndexHooked = true
-
+-- 🛡️ Hook __index (bypass leitura)
+if not _G.MoskitoHubIndexHooked then
+    _G.MoskitoHubIndexHooked = true
     local mt = getrawmetatable(game)
     setreadonly(mt, false)
+    local oldIndex = mt.__index
+    mt.__index = newcclosure(function(tbl, key)
+        if typeof(tbl) == "Instance" and tbl:IsA("Humanoid") then
+            if key == "WalkSpeed" and speedHackOn then
+                return normalWalkSpeed
+            end
+            if key == "JumpPower" and jumpHackOn then
+                return normalJumpPower
+            end
+            if key == "JumpHeight" and jumpHackOn then
+                return 7.2 -- valor padrão
+            end
+        end
+        return oldIndex(tbl, key)
+    end)
+    setreadonly(mt, true)
+end
 
+-- 🛡️ Hook __newindex (bloqueia mudanças)
+if not _G.MoskitoHubNewIndexHooked then
+    _G.MoskitoHubNewIndexHooked = true
+    local mt = getrawmetatable(game)
+    setreadonly(mt, false)
     local oldNewIndex = mt.__newindex
-
     mt.__newindex = newcclosure(function(tbl, key, val)
         if typeof(tbl) == "Instance" and tbl:IsA("Humanoid") then
             if key == "WalkSpeed" and speedHackOn and val ~= hackWalkSpeed then
@@ -217,5 +230,45 @@ if not _G.MoskitoHubNewIndexHooked then
                 warn("[MoskitoHub] ⚠️ Bloqueado alteração de JumpPower:", val)
                 return
             end
-            if key
-```
+            if key == "JumpHeight" and jumpHackOn then
+                warn("[MoskitoHub] ⚠️ Bloqueado alteração de JumpHeight:", val)
+                return
+            end
+            if key == "UseJumpPower" and jumpHackOn and val == false then
+                warn("[MoskitoHub] ⚠️ Tentaram desativar UseJumpPower")
+                return
+            end
+        end
+        return oldNewIndex(tbl, key, val)
+    end)
+    setreadonly(mt, true)
+end
+
+-- 🛡️ Hook __namecall (anti-kick / anti-anticheat)
+if not _G.MoskitoHubHooked then
+    _G.MoskitoHubHooked = true
+    local oldNamecall
+    oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+        local method = getnamecallmethod()
+        if method == "Kick" and self == LocalPlayer then
+            warn("[MoskitoHub] ⚠️ Kick bloqueado.")
+            return nil
+        end
+        if method == "Destroy" and self == LocalPlayer then
+            warn("[MoskitoHub] ⚠️ Destroy bloqueado.")
+            return nil
+        end
+        if method == "BreakJoints" and self == LocalPlayer.Character then
+            warn("[MoskitoHub] ⚠️ BreakJoints bloqueado.")
+            return nil
+        end
+        if (self:IsA("RemoteEvent") or self:IsA("RemoteFunction")) and method:lower():find("server") then
+            local name = self.Name:lower()
+            if name:find("anticheat") or name:find("report") or name:find("ban") then
+                warn("[MoskitoHub] ⚠️ Remote suspeito bloqueado:", self.Name)
+                return nil
+            end
+        end
+        return oldNamecall(self, ...)
+    end))
+end

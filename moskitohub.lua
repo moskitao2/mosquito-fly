@@ -14,8 +14,8 @@ local highlightRefs = {}
 local aimbotConnection
 
 -- Valores normais e hack
-local normalWalkSpeed = 16
-local hackWalkSpeed = 50
+local normalWalkSpeed = 34
+local hackWalkSpeed = 120
 
 -- Função segura para obter Humanoid
 local function getCharAndHum(player)
@@ -313,3 +313,4 @@ UserInputService.JumpRequest:Connect(function()
         infiniteJump()
     end
 end)
+

@@ -304,7 +304,7 @@ local function infiniteJump()
     if not char then return end
     local root = char:FindFirstChild("HumanoidRootPart")
     if root then
-        root.Velocity = Vector3.new(root.Velocity.X, 80, root.Velocity.Z)
+        root.Velocity = Vector3.new(root.Velocity.X, 100, root.Velocity.Z)
     end
 end
 
@@ -313,6 +313,7 @@ UserInputService.JumpRequest:Connect(function()
         infiniteJump()
     end
 end)
+
 
 
 

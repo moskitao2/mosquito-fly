@@ -5,7 +5,7 @@ local LocalPlayer = Players.LocalPlayer
 
 -- Estados
 local speedHackOn = false
-local jumpHackOn = false
+local infiniteJumpActive = false
 local espOn = false
 local espHighlightOn = false
 local aimbotOn = false
@@ -15,9 +15,7 @@ local aimbotConnection
 
 -- Valores normais e hack
 local normalWalkSpeed = 16
-local normalJumpPower = 50
 local hackWalkSpeed = 50
-local hackJumpPower = 100
 
 -- Função segura para obter Humanoid
 local function getCharAndHum(player)
@@ -33,7 +31,7 @@ screenGui.ResetOnSpawn = false
 screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 260, 0, 290) -- Aumentei a altura pra caber botão novo
+frame.Size = UDim2.new(0, 260, 0, 290)
 frame.Position = UDim2.new(0, 40, 0, 40)
 frame.BackgroundColor3 = Color3.fromRGB(32, 39, 54)
 frame.BorderSizePixel = 0
@@ -140,62 +138,66 @@ end
 
 -- ESP Highlight (Highlight vermelho)
 local function clearHighlightESP(char)
-	if not char then return end
-	local highlight = char:FindFirstChild("ESP_Highlight")
-	if highlight then
-		highlight:Destroy()
-		highlightRefs[char] = nil
-	end
+    if not char then return end
+    local highlight = char:FindFirstChild("ESP_Highlight")
+    if highlight then
+        highlight:Destroy()
+        highlightRefs[char] = nil
+    end
 end
 
 local function addHighlightESPToChar(char)
-	if not char then return end
-	if highlightRefs[char] then return end
+    if not char then return end
+    if highlightRefs[char] then return end
 
-	local highlight = Instance.new("Highlight")
-	highlight.Name = "ESP_Highlight"
-	highlight.FillColor = Color3.fromRGB(255, 0, 0)
-	highlight.OutlineColor = Color3.new(0, 0, 0)
-	highlight.FillTransparency = 0.5
-	highlight.OutlineTransparency = 0
-	highlight.Adornee = char
-	highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-	highlight.Parent = char
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "ESP_Highlight"
+    highlight.FillColor = Color3.fromRGB(255, 0, 0)
+    highlight.OutlineColor = Color3.new(0, 0, 0)
+    highlight.FillTransparency = 0.5
+    highlight.OutlineTransparency = 0
+    highlight.Adornee = char
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Parent = char
 
-	highlightRefs[char] = highlight
+    highlightRefs[char] = highlight
 end
 
 -- Atualização de ESPs
 local function updateESPForAll()
-	for _, player in ipairs(Players:GetPlayers()) do
-		if player ~= LocalPlayer and player.Character then
-			local char = player.Character
-			if espOn then
-				if not espAdorns[char] then
-					addESPToChar(char)
-				end
-			else
-				clearESP(char)
-				espAdorns[char] = nil
-			end
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local char = player.Character
+            if espOn then
+                if not espAdorns[char] then
+                    addESPToChar(char)
+                end
+            else
+                clearESP(char)
+                espAdorns[char] = nil
+            end
 
-			if espHighlightOn then
-				if not highlightRefs[char] then
-					addHighlightESPToChar(char)
-				end
-			else
-				clearHighlightESP(char)
-			end
-		end
-	end
+            if espHighlightOn then
+                if not highlightRefs[char] then
+                    addHighlightESPToChar(char)
+                end
+            else
+                clearHighlightESP(char)
+            end
+        end
+    end
 end
 
 -- Atualizações constantes
 RunService.Stepped:Connect(function()
     local char, hum = getCharAndHum(LocalPlayer)
     if hum then
-        if speedHackOn then hum.WalkSpeed = hackWalkSpeed else hum.WalkSpeed = normalWalkSpeed end
-        if jumpHackOn then hum.JumpPower = hackJumpPower else hum.JumpPower = normalJumpPower end
+        if speedHackOn then 
+            hum.WalkSpeed = hackWalkSpeed 
+        else 
+            hum.WalkSpeed = normalWalkSpeed 
+        end
+        -- removido ajuste do JumpPower para pulo infinito funcionar melhor
     end
 end)
 
@@ -287,11 +289,27 @@ local speedBtn = createToggleBtn("Ativar Speed Hack", 150, function(btn)
     speedBtn._on = speedHackOn
 end)
 
-local jumpBtn = createToggleBtn("Ativar Jump Hack", 200, function(btn)
-    jumpHackOn = not jumpHackOn
-    btn.Text = jumpHackOn and "Desativar Jump Hack" or "Ativar Jump Hack"
-    btn.BackgroundColor3 = jumpHackOn and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70, 130, 180)
-    jumpBtn._on = jumpHackOn
+local jumpBtn = createToggleBtn("Ativar Pulo Infinito", 200, function(btn)
+    infiniteJumpActive = not infiniteJumpActive
+    btn.Text = infiniteJumpActive and "Desativar Pulo Infinito" or "Ativar Pulo Infinito"
+    btn.BackgroundColor3 = infiniteJumpActive and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(70, 130, 180)
+    jumpBtn._on = infiniteJumpActive
 end)
 
 local aimbotBtn = createToggleBtn("Ativar Aimbot", 250, toggleAimbot)
+
+-- Implementação do pulo infinito
+local function infiniteJump()
+    local char = LocalPlayer.Character
+    if not char then return end
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if root then
+        root.Velocity = Vector3.new(root.Velocity.X, 100, root.Velocity.Z)
+    end
+end
+
+UserInputService.JumpRequest:Connect(function()
+    if infiniteJumpActive then
+        infiniteJump()
+    end
+end)

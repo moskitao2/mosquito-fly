@@ -1,4 +1,4 @@
--- Criar botão na tela
+-- Criar botão na tela (GUI)
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "ESP_UI"
 ScreenGui.ResetOnSpawn = false
@@ -7,18 +7,19 @@ ScreenGui.Parent = game.CoreGui
 local botao = Instance.new("TextButton")
 botao.Name = "ToggleESP"
 botao.Parent = ScreenGui
-botao.Size = UDim2.new(0, 120, 0, 40)
+botao.Size = UDim2.new(0, 140, 0, 50)
 botao.Position = UDim2.new(0, 20, 0, 100)
-botao.BackgroundColor3 = Color3.new(0.2, 0, 0) -- Fundo escuro
-botao.BorderSizePixel = 0
-botao.Text = "Ativar ESP"
-botao.TextColor3 = Color3.new(1, 0, 0) -- Texto vermelho
+botao.BackgroundColor3 = Color3.new(1, 0, 0) -- Fundo VERMELHO
+botao.BorderSizePixel = 2
+botao.BorderColor3 = Color3.new(0.6, 0, 0) -- Borda mais escura
+botao.Text = "🔴 Ativar ESP"
+botao.TextColor3 = Color3.new(1, 1, 1) -- Texto BRANCO
 botao.Font = Enum.Font.SourceSansBold
-botao.TextSize = 20
+botao.TextSize = 22
 
 local espAtivo = false
 
--- Função para adicionar ESP ao player
+-- Adiciona ESP ao jogador
 local function adicionarESP(player)
     if player.Character and not player.Character:FindFirstChild("ESP_Highlight") then
         local highlight = Instance.new("Highlight")
@@ -33,10 +34,13 @@ local function adicionarESP(player)
     end
 end
 
--- Função para remover ESP
+-- Remove ESP
 local function removerESP(player)
-    if player.Character and player.Character:FindFirstChild("ESP_Highlight") then
-        player.Character:FindFirstChild("ESP_Highlight"):Destroy()
+    if player.Character then
+        local esp = player.Character:FindFirstChild("ESP_Highlight")
+        if esp then
+            esp:Destroy()
+        end
     end
 end
 
@@ -60,17 +64,17 @@ local function desativarESP()
     end
 end
 
--- Função de toggle
+-- Toggle
 local function toggleESP()
     espAtivo = not espAtivo
     if espAtivo then
-        botao.Text = "Desativar ESP"
+        botao.Text = "🔴 Desativar ESP"
         ativarESP()
     else
-        botao.Text = "Ativar ESP"
+        botao.Text = "🔴 Ativar ESP"
         desativarESP()
     end
 end
 
--- Conectar clique do botão
+-- Clique do botão
 botao.MouseButton1Click:Connect(toggleESP)

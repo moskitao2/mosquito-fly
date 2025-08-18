@@ -4,12 +4,16 @@ local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
--- GUI
+-----------------------------------------------------
+-- GUI Setup
+-----------------------------------------------------
+
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "ESP_UI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = game:GetService("CoreGui")
 
+-- Botão ESP
 local botao = Instance.new("TextButton")
 botao.Name = "ToggleESP"
 botao.Parent = ScreenGui
@@ -23,10 +27,33 @@ botao.TextColor3 = Color3.new(1, 1, 1)
 botao.Font = Enum.Font.SourceSansBold
 botao.TextSize = 22
 
+-- Círculo de FOV
+local fovCircle = Instance.new("Frame")
+fovCircle.Name = "FOVCircle"
+fovCircle.Parent = ScreenGui
+fovCircle.AnchorPoint = Vector2.new(0.5, 0.5)
+fovCircle.Position = UDim2.new(0.5, 0, 0.5, 0)
+fovCircle.Size = UDim2.new(0, 300, 0, 300) -- Tamanho do FOV em pixels
+fovCircle.BackgroundTransparency = 1
+
+local uiCorner = Instance.new("UICorner")
+uiCorner.CornerRadius = UDim.new(1, 0)
+uiCorner.Parent = fovCircle
+
+local uiStroke = Instance.new("UIStroke")
+uiStroke.Thickness = 2
+uiStroke.Color = Color3.new(1, 0, 0) -- Vermelho
+uiStroke.Transparency = 0.25
+uiStroke.Parent = fovCircle
+
+-----------------------------------------------------
 -- Estados
+-----------------------------------------------------
 local espAtivo = false
 local aimAtivo = false
 local connections = {}
+
+local FOV_RADIUS = 150 -- raio do FOV em pixels (metade do size do círculo)
 
 -----------------------------------------------------
 -- ESP Funções
@@ -106,7 +133,7 @@ local function toggleESP()
 end
 
 -----------------------------------------------------
--- AIM ASSIST Funções
+-- AIM ASSIST (com FOV)
 -----------------------------------------------------
 
 local function getPlayerMaisProximo()
@@ -115,10 +142,16 @@ local function getPlayerMaisProximo()
 
 	for _, player in pairs(Players:GetPlayers()) do
 		if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-			local distancia = (player.Character.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-			if distancia < menorDistancia then
-				menorDistancia = distancia
-				maisPerto = player
+			local hrp = player.Character.HumanoidRootPart
+			local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+
+			if onScreen then
+				local mouseDist = (Vector2.new(screenPos.X, screenPos.Y) - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
+
+				if mouseDist <= FOV_RADIUS and mouseDist < menorDistancia then
+					menorDistancia = mouseDist
+					maisPerto = player
+				end
 			end
 		end
 	end
@@ -126,7 +159,6 @@ local function getPlayerMaisProximo()
 	return maisPerto
 end
 
--- Tecla E para Aim Assist
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if not gameProcessed and input.KeyCode == Enum.KeyCode.E then
 		aimAtivo = not aimAtivo
@@ -138,7 +170,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	end
 end)
 
--- Atualiza a câmera quando Aim Assist está ligado
 RunService.RenderStepped:Connect(function()
 	if aimAtivo then
 		local alvo = getPlayerMaisProximo()
@@ -150,7 +181,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -----------------------------------------------------
--- Conectar botão da interface
+-- Conectar botão
 -----------------------------------------------------
 
 botao.MouseButton1Click:Connect(toggleESP)

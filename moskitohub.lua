@@ -1,145 +1,100 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
+local player = Players.LocalPlayer
 
------------------------------------------------------
--- GUI Setup
------------------------------------------------------
+-- GUI Mosquito Hub
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "MosquitoHub"
+screenGui.Parent = player:WaitForChild("PlayerGui")
 
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ESP_UI"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = game:GetService("CoreGui")
+-- Botão
+local toggleButton = Instance.new("TextButton")
+toggleButton.Size = UDim2.new(0, 160, 0, 50)
+toggleButton.Position = UDim2.new(0, 20, 0, 100)
+toggleButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+toggleButton.TextColor3 = Color3.new(1, 1, 1)
+toggleButton.Font = Enum.Font.GothamBold
+toggleButton.TextSize = 16
+toggleButton.Text = "Ativar Plataforma"
+toggleButton.BorderSizePixel = 0
+toggleButton.Parent = screenGui
 
--- Botão ESP
-local botao = Instance.new("TextButton")
-botao.Name = "ToggleESP"
-botao.Parent = ScreenGui
-botao.Size = UDim2.new(0, 140, 0, 50)
-botao.Position = UDim2.new(0, 20, 0, 100)
-botao.BackgroundColor3 = Color3.new(1, 0, 0)
-botao.BorderSizePixel = 2
-botao.BorderColor3 = Color3.new(0.6, 0, 0)
-botao.Text = "🔴 Ativar ESP"
-botao.TextColor3 = Color3.new(1, 1, 1)
-botao.Font = Enum.Font.SourceSansBold
-botao.TextSize = 22
+-- Arredondar botão
+local uicorner = Instance.new("UICorner")
+uicorner.CornerRadius = UDim.new(0, 8)
+uicorner.Parent = toggleButton
 
--- Círculo de FOV
-local fovCircle = Instance.new("Frame")
-fovCircle.Name = "FOVCircle"
-fovCircle.Parent = ScreenGui
-fovCircle.AnchorPoint = Vector2.new(0.5, 0.5)
-fovCircle.Position = UDim2.new(0.5, 0, 0.5, 0)
-fovCircle.Size = UDim2.new(0, 300, 0, 300) -- Tamanho do FOV em pixels
-fovCircle.BackgroundTransparency = 1
+-- Variáveis
+local plataformaAtiva = false
+local conexaoSubida
+local conexaoRGB
+local plataforma
 
-local uiCorner = Instance.new("UICorner")
-uiCorner.CornerRadius = UDim.new(1, 0)
-uiCorner.Parent = fovCircle
+-- Função para criar a plataforma
+local function criarPlataforma(character)
+	local humanoidRoot = character:WaitForChild("HumanoidRootPart")
 
-local uiStroke = Instance.new("UIStroke")
-uiStroke.Thickness = 2
-uiStroke.Color = Color3.new(1, 0, 0) -- Vermelho
-uiStroke.Transparency = 0.25
-uiStroke.Parent = fovCircle
+	plataforma = Instance.new("Part")
+	plataforma.Size = Vector3.new(6, 1, 6)
+	plataforma.Anchored = true
+	plataforma.CanCollide = true
+	plataforma.Position = humanoidRoot.Position - Vector3.new(0, 3, 0)
+	plataforma.Color = Color3.fromRGB(255, 0, 0)
+	plataforma.Name = "PlataformaRGB"
+	plataforma.Parent = workspace
 
------------------------------------------------------
--- Estados
------------------------------------------------------
-local espAtivo = false
-local aimAtivo = false
-local connections = {}
+	-- Movimento para cima
+	local tempo = 0
+	local duracao = 5
+	local velocidade = 0.5
 
-local FOV_RADIUS = 150 -- raio do FOV em pixels (metade do size do círculo)
-
------------------------------------------------------
--- ESP Funções
------------------------------------------------------
-
-local function adicionarESP(player)
-	if player.Character and not player.Character:FindFirstChild("ESP_Highlight") then
-		local highlight = Instance.new("Highlight")
-		highlight.Name = "ESP_Highlight"
-		highlight.Adornee = player.Character
-		highlight.FillColor = Color3.new(1, 0, 0)
-		highlight.OutlineColor = Color3.new(1, 0, 0)
-		highlight.FillTransparency = 0.3
-		highlight.OutlineTransparency = 0
-		highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-		highlight.Parent = player.Character
-	end
-end
-
-local function removerESP(player)
-	if player.Character then
-		local esp = player.Character:FindFirstChild("ESP_Highlight")
-		if esp then
-			esp:Destroy()
-		end
-	end
-end
-
-local function ativarESP()
-	for _, player in ipairs(Players:GetPlayers()) do
-		if player ~= LocalPlayer then
-			adicionarESP(player)
-			local conn = player.CharacterAdded:Connect(function()
-				task.wait(1)
-				adicionarESP(player)
-			end)
-			table.insert(connections, conn)
-		end
-	end
-
-	local conn = Players.PlayerAdded:Connect(function(player)
-		task.wait(1)
-		if player ~= LocalPlayer then
-			adicionarESP(player)
-			local charConn = player.CharacterAdded:Connect(function()
-				task.wait(1)
-				adicionarESP(player)
-			end)
-			table.insert(connections, charConn)
+	conexaoSubida = RunService.RenderStepped:Connect(function(dt)
+		if tempo < duracao then
+			tempo += dt
+			plataforma.Position += Vector3.new(0, velocidade * dt, 0)
+		else
+			conexaoSubida:Disconnect()
 		end
 	end)
-	table.insert(connections, conn)
-end
 
-local function desativarESP()
-	for _, player in ipairs(Players:GetPlayers()) do
-		removerESP(player)
-	end
-
-	for _, conn in ipairs(connections) do
-		if conn.Connected then
-			conn:Disconnect()
+	-- Efeito RGB
+	local h = 0
+	conexaoRGB = RunService.RenderStepped:Connect(function()
+		if plataforma then
+			h = (h + 0.01) % 1
+			plataforma.Color = Color3.fromHSV(h, 1, 1)
 		end
-	end
-	connections = {}
+	end)
 end
 
-local function toggleESP()
-	espAtivo = not espAtivo
-	if espAtivo then
-		botao.Text = "🔴 Desativar ESP"
-		ativarESP()
+-- Função para remover a plataforma
+local function destruirPlataforma()
+	if conexaoSubida then conexaoSubida:Disconnect() end
+	if conexaoRGB then conexaoRGB:Disconnect() end
+	if plataforma then plataforma:Destroy() end
+end
+
+-- Lidar com clique no botão
+toggleButton.MouseButton1Click:Connect(function()
+	plataformaAtiva = not plataformaAtiva
+
+	if plataformaAtiva then
+		toggleButton.Text = "Desativar Plataforma"
+		toggleButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+		if player.Character then
+			criarPlataforma(player.Character)
+		end
 	else
-		botao.Text = "🔴 Ativar ESP"
-		desativarESP()
+		toggleButton.Text = "Ativar Plataforma"
+		toggleButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+		destruirPlataforma()
 	end
-end
+end)
 
------------------------------------------------------
--- AIM ASSIST (com FOV)
------------------------------------------------------
-
-
------------------------------------------------------
--- Conectar botão
------------------------------------------------------
-
-botao.MouseButton1Click:Connect(toggleESP)
-
+-- Caso o jogador respawn
+player.CharacterAdded:Connect(function(character)
+	if plataformaAtiva then
+		task.wait(1)
+		criarPlataforma(character)
+	end
+end)

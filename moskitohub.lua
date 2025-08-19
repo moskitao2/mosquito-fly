@@ -2,13 +2,12 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 
--- GUI Mosquito Hub
+-- Criar GUI Mosquito Hub AUTOMÁTICO
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "MosquitoHub"
 screenGui.Parent = player:WaitForChild("PlayerGui")
 screenGui.ResetOnSpawn = false
 
--- Botão
 local toggleButton = Instance.new("TextButton")
 toggleButton.Size = UDim2.new(0, 160, 0, 50)
 toggleButton.Position = UDim2.new(0, 20, 0, 100)
@@ -20,64 +19,76 @@ toggleButton.Text = "Ativar Plataforma"
 toggleButton.BorderSizePixel = 0
 toggleButton.Parent = screenGui
 
--- Arredondamento
 local uicorner = Instance.new("UICorner")
 uicorner.CornerRadius = UDim.new(0, 8)
 uicorner.Parent = toggleButton
 
 -- Variáveis
 local plataformaAtiva = false
-local conexaoRGB
 local plataforma
-local weld
+local conexaoRender
+local corHue = 0
 
--- Função para criar a plataforma presa ao jogador
-local function criarPlataforma(character)
-	local humanoidRoot = character:WaitForChild("HumanoidRootPart")
+local personagem, humanoidRoot
 
-	-- Criar a plataforma
+-- Função criar plataforma
+local function criarPlataforma()
+	if plataforma then
+		plataforma:Destroy()
+	end
+
+	personagem = player.Character
+	if not personagem then return end
+	humanoidRoot = personagem:FindFirstChild("HumanoidRootPart")
+	if not humanoidRoot then return end
+
+	-- Criar plataforma ancorada
 	plataforma = Instance.new("Part")
 	plataforma.Size = Vector3.new(6, 1, 6)
-	plataforma.Anchored = false
+	plataforma.Anchored = true
 	plataforma.CanCollide = true
 	plataforma.Position = humanoidRoot.Position - Vector3.new(0, 3, 0)
-	plataforma.Color = Color3.fromRGB(255, 0, 0)
-	plataforma.Name = "PlataformaFixada"
+	plataforma.Name = "PlataformaRGB"
 	plataforma.Parent = workspace
 
-	-- Prender a plataforma no jogador com WeldConstraint
-	weld = Instance.new("WeldConstraint")
-	weld.Part0 = plataforma
-	weld.Part1 = humanoidRoot
-	weld.Parent = plataforma
+	-- Subida rápida e "grudando" o personagem
+	local velocidadeSubida = 5 -- units por segundo
 
-	-- Efeito RGB na plataforma
-	local h = 0
-	conexaoRGB = RunService.RenderStepped:Connect(function()
-		if plataforma then
-			h = (h + 0.01) % 1
-			plataforma.Color = Color3.fromHSV(h, 1, 1)
+	-- Conexão para mover plataforma e personagem juntos
+	conexaoRender = RunService.RenderStepped:Connect(function(dt)
+		if plataforma and humanoidRoot then
+			-- Mover plataforma para cima
+			plataforma.Position = plataforma.Position + Vector3.new(0, velocidadeSubida * dt, 0)
+			-- Forçar personagem a acompanhar (mantendo a mesma distância em Y)
+			humanoidRoot.CFrame = humanoidRoot.CFrame + Vector3.new(0, velocidadeSubida * dt, 0)
+
+			-- Efeito RGB
+			corHue = (corHue + dt) % 1
+			plataforma.Color = Color3.fromHSV(corHue, 1, 1)
 		end
 	end)
 end
 
--- Função para destruir tudo
+-- Função destruir plataforma e parar subida
 local function destruirPlataforma()
-	if conexaoRGB then conexaoRGB:Disconnect() end
-	if weld then weld:Destroy() end
-	if plataforma then plataforma:Destroy() end
+	if conexaoRender then
+		conexaoRender:Disconnect()
+		conexaoRender = nil
+	end
+	if plataforma then
+		plataforma:Destroy()
+		plataforma = nil
+	end
 end
 
--- Clicar no botão
+-- Botão toggle
 toggleButton.MouseButton1Click:Connect(function()
 	plataformaAtiva = not plataformaAtiva
 
 	if plataformaAtiva then
 		toggleButton.Text = "Desativar Plataforma"
 		toggleButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-		if player.Character then
-			criarPlataforma(player.Character)
-		end
+		criarPlataforma()
 	else
 		toggleButton.Text = "Ativar Plataforma"
 		toggleButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
@@ -85,10 +96,17 @@ toggleButton.MouseButton1Click:Connect(function()
 	end
 end)
 
--- Quando o personagem reaparecer
-player.CharacterAdded:Connect(function(character)
+-- Recriar plataforma se o personagem renascer e estiver ativo
+player.CharacterAdded:Connect(function(char)
 	if plataformaAtiva then
 		task.wait(1)
-		criarPlataforma(character)
+		criarPlataforma()
 	end
 end)
+
+-- Mostrar Mosquito Hub automaticamente e plataforma NÃO ativa ao entrar
+-- Se quiser que já comece ativada, descomente as linhas abaixo:
+// plataformaAtiva = true
+// criarPlataforma()
+// toggleButton.Text = "Desativar Plataforma"
+// toggleButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)

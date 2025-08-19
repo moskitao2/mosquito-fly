@@ -136,52 +136,10 @@ end
 -- AIM ASSIST (com FOV)
 -----------------------------------------------------
 
-local function getPlayerMaisProximo()
-	local maisPerto = nil
-	local menorDistancia = math.huge
-
-	for _, player in pairs(Players:GetPlayers()) do
-		if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-			local hrp = player.Character.HumanoidRootPart
-			local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-
-			if onScreen then
-				local mouseDist = (Vector2.new(screenPos.X, screenPos.Y) - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
-
-				if mouseDist <= FOV_RADIUS and mouseDist < menorDistancia then
-					menorDistancia = mouseDist
-					maisPerto = player
-				end
-			end
-		end
-	end
-
-	return maisPerto
-end
-
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if not gameProcessed and input.KeyCode == Enum.KeyCode.E then
-		aimAtivo = not aimAtivo
-		if aimAtivo then
-			print("🎯 Aim Assist ON")
-		else
-			print("❌ Aim Assist OFF")
-		end
-	end
-end)
-
-RunService.RenderStepped:Connect(function()
-	if aimAtivo then
-		local alvo = getPlayerMaisProximo()
-		if alvo and alvo.Character and alvo.Character:FindFirstChild("HumanoidRootPart") then
-			local alvoPos = alvo.Character.HumanoidRootPart.Position
-			Camera.CFrame = CFrame.new(Camera.CFrame.Position, alvoPos)
-		end
-	end
-end)
 
 -----------------------------------------------------
 -- Conectar botão
 -----------------------------------------------------
 
 botao.MouseButton1Click:Connect(toggleESP)
+

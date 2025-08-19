@@ -6,6 +6,7 @@ local player = Players.LocalPlayer
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "MosquitoHub"
 screenGui.Parent = player:WaitForChild("PlayerGui")
+screenGui.ResetOnSpawn = false
 
 -- Botão
 local toggleButton = Instance.new("TextButton")
@@ -19,45 +20,38 @@ toggleButton.Text = "Ativar Plataforma"
 toggleButton.BorderSizePixel = 0
 toggleButton.Parent = screenGui
 
--- Arredondar botão
+-- Arredondamento
 local uicorner = Instance.new("UICorner")
 uicorner.CornerRadius = UDim.new(0, 8)
 uicorner.Parent = toggleButton
 
 -- Variáveis
 local plataformaAtiva = false
-local conexaoSubida
 local conexaoRGB
 local plataforma
+local weld
 
--- Função para criar a plataforma
+-- Função para criar a plataforma presa ao jogador
 local function criarPlataforma(character)
 	local humanoidRoot = character:WaitForChild("HumanoidRootPart")
 
+	-- Criar a plataforma
 	plataforma = Instance.new("Part")
 	plataforma.Size = Vector3.new(6, 1, 6)
-	plataforma.Anchored = true
+	plataforma.Anchored = false
 	plataforma.CanCollide = true
 	plataforma.Position = humanoidRoot.Position - Vector3.new(0, 3, 0)
 	plataforma.Color = Color3.fromRGB(255, 0, 0)
-	plataforma.Name = "PlataformaRGB"
+	plataforma.Name = "PlataformaFixada"
 	plataforma.Parent = workspace
 
-	-- Movimento para cima
-	local tempo = 0
-	local duracao = 5
-	local velocidade = 0.5
+	-- Prender a plataforma no jogador com WeldConstraint
+	weld = Instance.new("WeldConstraint")
+	weld.Part0 = plataforma
+	weld.Part1 = humanoidRoot
+	weld.Parent = plataforma
 
-	conexaoSubida = RunService.RenderStepped:Connect(function(dt)
-		if tempo < duracao then
-			tempo += dt
-			plataforma.Position += Vector3.new(0, velocidade * dt, 0)
-		else
-			conexaoSubida:Disconnect()
-		end
-	end)
-
-	-- Efeito RGB
+	-- Efeito RGB na plataforma
 	local h = 0
 	conexaoRGB = RunService.RenderStepped:Connect(function()
 		if plataforma then
@@ -67,14 +61,14 @@ local function criarPlataforma(character)
 	end)
 end
 
--- Função para remover a plataforma
+-- Função para destruir tudo
 local function destruirPlataforma()
-	if conexaoSubida then conexaoSubida:Disconnect() end
 	if conexaoRGB then conexaoRGB:Disconnect() end
+	if weld then weld:Destroy() end
 	if plataforma then plataforma:Destroy() end
 end
 
--- Lidar com clique no botão
+-- Clicar no botão
 toggleButton.MouseButton1Click:Connect(function()
 	plataformaAtiva = not plataformaAtiva
 
@@ -91,7 +85,7 @@ toggleButton.MouseButton1Click:Connect(function()
 	end
 end)
 
--- Caso o jogador respawn
+-- Quando o personagem reaparecer
 player.CharacterAdded:Connect(function(character)
 	if plataformaAtiva then
 		task.wait(1)
